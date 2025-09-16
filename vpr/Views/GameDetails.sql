@@ -20,11 +20,9 @@ SELECT  g.GameId, g.PlayedDate
         , team2_Win = CASE WHEN g.TeamTwoScore > g.TeamOneScore THEN 1 ELSE 0 END
 FROM        Game g
 left join   TypeGame tg on g.TypeGameId = tg.TypeGameId
-left join   Team t1 on g.TeamOneId = t1.TeamId
-left join   Team t2 on g.TeamTwoId = t2.TeamId    
-left join   Player t1p1 on t1.PlayerOneId = t1p1.PlayerId
-left join   Player t1p2 on t1.PlayerTwoId = t1p2.PlayerId
-left join   Player t2p1 on t2.PlayerOneId = t2p1.PlayerId
-left join   Player t2p2 on t2.PlayerTwoId = t2p2.PlayerId
+left join   Player t1p1 on g.TeamOnePlayerOneId = t1p1.PlayerId
+left join   Player t1p2 on g.TeamOnePlayerTwoId = t1p2.PlayerId
+left join   Player t2p1 on g.TeamTwoPlayerOneId = t2p1.PlayerId
+left join   Player t2p2 on g.TeamTwoPlayerTwoId = t2p2.PlayerId
 
 

@@ -32,16 +32,23 @@ WITH PlayerGameStats AS
 (
     select  p.PlayerId
             , g.GameId
-            , t.TeamId
-            , CASE WHEN g.TeamOneId = t.TeamId 
-                    and g.TeamOneScore > g.TeamTwoScore 
+            , CASE WHEN (  g.TeamOneScore > g.TeamTwoScore 
+                        and
+                            (p.PlayerId = g.TeamOnePlayerOneId 
+                            OR  p.PlayerId = g.TeamOnePlayerTwoId)
+                        )
+                        OR ( g.TeamTwoScore > g.TeamOneScore
+                            and
+                            (p.PlayerId = g.TeamTwoPlayerOneId 
+                            OR  p.PlayerId = g.TeamTwoPlayerTwoId)
+                        )
                    THEN  1
                    ELSE 0 END AS Result
     from [vpr].[dbo].[Player] p 
-    left join Team  t on    t.PlayerOneId = p.PlayerId
-                        or  t.PlayerTwoId = p.PlayerId
-    join Game  g on    t.TeamId = g.TeamOneId 
-                   or  t.TeamId = g.TeamTwoId
+    join Game  g on    p.PlayerId = g.TeamOnePlayerOneId
+                    or  p.PlayerId = g.TeamOnePlayerTwoId
+                    or  p.PlayerId = g.TeamTwoPlayerOneId
+                    or  p.PlayerId = g.TeamTwoPlayerTwoId
 )
 select  p.FirstName
     , GamesPlayed = COUNT(pg.GameId)

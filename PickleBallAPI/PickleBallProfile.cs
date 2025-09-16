@@ -13,7 +13,6 @@ namespace PickleBallAPI
             CreateMap<PlayerRating, PlayerRatingDto>().ReverseMap();
             CreateMap<TypeGame, TypeGameDto>().ReverseMap();
             CreateMap<Player, PlayerDto>().ReverseMap();
-            CreateMap<Team, TeamDto>().ReverseMap();
             CreateMap<Game, GameDto>().ReverseMap();
         }
     }

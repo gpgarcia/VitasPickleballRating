@@ -15,8 +15,4 @@ public partial class Player
     public DateTimeOffset ChangedDate { get; set; }
 
     public virtual ICollection<PlayerRating> PlayerRatings { get; set; } = new List<PlayerRating>();
-
-    public virtual ICollection<Team> TeamPlayerOnes { get; set; } = new List<Team>();
-
-    public virtual ICollection<Team> TeamPlayerTwos { get; set; } = new List<Team>();
 }

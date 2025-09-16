@@ -19,8 +19,6 @@ public partial class VprContext : DbContext
 
     public virtual DbSet<PlayerRating> PlayerRatings { get; set; }
 
-    public virtual DbSet<Team> Teams { get; set; }
-
     public virtual DbSet<TypeGame> TypeGames { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -30,16 +28,6 @@ public partial class VprContext : DbContext
             entity.HasKey(e => e.GameId).HasName("PK__Game__2AB897FD1DA4E37D");
 
             entity.ToTable("Game");
-
-            entity.HasOne(d => d.TeamOne).WithMany(p => p.GameTeamOnes)
-                .HasForeignKey(d => d.TeamOneId)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_Game_TeamOne");
-
-            entity.HasOne(d => d.TeamTwo).WithMany(p => p.GameTeamTwos)
-                .HasForeignKey(d => d.TeamTwoId)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_Game_TeamTwo");
 
             entity.HasOne(d => d.TypeGame).WithMany(p => p.Games)
                 .HasForeignKey(d => d.TypeGameId)
@@ -131,32 +119,6 @@ public partial class VprContext : DbContext
                 .HasForeignKey(d => d.PlayerId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_PlayerRating_Player");
-        });
-
-        modelBuilder.Entity<Team>(entity =>
-        {
-            entity.HasKey(e => e.TeamId).HasName("PK__Team__123AE7995084B5E5");
-
-            entity.ToTable("Team");
-
-            if (Database.IsSqlServer())
-            {
-                entity.Property(e => e.ChangedDate).HasDefaultValueSql("GetDate()");
-            }
-            else //if (Database.IsSqlite())
-            {
-                entity.Property(e => e.ChangedDate).HasDefaultValueSql("CURRENT_TIMESTAMP");
-            }
-
-            entity.HasOne(d => d.PlayerOne).WithMany(p => p.TeamPlayerOnes)
-                .HasForeignKey(d => d.PlayerOneId)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_Team_PlayerOne");
-
-            entity.HasOne(d => d.PlayerTwo).WithMany(p => p.TeamPlayerTwos)
-                .HasForeignKey(d => d.PlayerTwoId)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_Team_PlayerTwo ");
         });
 
         modelBuilder.Entity<TypeGame>(entity =>

@@ -29,13 +29,11 @@ namespace PickleBallAPI.Controllers
         {
             var games = await _context
                 .Games
-                .Include(g => g.TeamOne)
                 .Include(g => g.TypeGame)
-                .Include(g => g.TeamOne.PlayerOne)
-                .Include(g => g.TeamOne.PlayerTwo)
-                .Include(g => g.TeamTwo)
-                .Include(g => g.TeamTwo.PlayerOne)
-                .Include(g => g.TeamTwo.PlayerTwo)
+                .Include(g => g.TeamOnePlayerOne)
+                .Include(g => g.TeamOnePlayerTwo)
+                .Include(g => g.TeamTwoPlayerOne)
+                .Include(g => g.TeamTwoPlayerTwo)
                 .ToListAsync();
 
             GameDto[] gameDtos = _mapper.Map<IEnumerable<Game>, GameDto[]>(games);
@@ -48,13 +46,11 @@ namespace PickleBallAPI.Controllers
         {
             var game = await _context
                 .Games
-                .Include(g => g.TeamOne)
                 .Include(g => g.TypeGame)
-                .Include(g => g.TeamOne.PlayerOne)
-                .Include(g => g.TeamOne.PlayerTwo)
-                .Include(g => g.TeamTwo)
-                .Include(g => g.TeamTwo.PlayerOne)
-                .Include(g => g.TeamTwo.PlayerTwo)
+                .Include(g => g.TeamOnePlayerOne)
+                .Include(g => g.TeamOnePlayerTwo)
+                .Include(g => g.TeamTwoPlayerOne)
+                .Include(g => g.TeamTwoPlayerTwo)
                 .FirstOrDefaultAsync(g => g.GameId == id)
                 ;
             if (game == null)

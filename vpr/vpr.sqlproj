@@ -61,7 +61,6 @@
     <Folder Include="Views" />
   </ItemGroup>
   <ItemGroup>
-    <Build Include="Tables\Team.sql" />
     <Build Include="Tables\Game.sql" />
     <Build Include="Tables\Player.sql" />
     <PostDeploy Include="UtilityScripts\Script.PostDeployment1.sql" />
