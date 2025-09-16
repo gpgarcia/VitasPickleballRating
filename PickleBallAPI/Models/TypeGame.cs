@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Text.Json.Serialization;
 
 namespace PickleBallAPI.Models;
 
@@ -12,6 +11,5 @@ public partial class TypeGame
 
     public DateTimeOffset ChangedDate { get; set; }
 
-    public ICollection<Game> Games { get; set; } = new List<Game>();
-
+    public virtual ICollection<Game> Games { get; set; } = new List<Game>();
 }

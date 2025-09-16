@@ -25,7 +25,7 @@ public partial class VprContext : DbContext
     {
         modelBuilder.Entity<Game>(entity =>
         {
-            entity.HasKey(e => e.GameId).HasName("PK__Game__2AB897FD1DA4E37D");
+            entity.HasKey(e => e.GameId).HasName("PK__Game__2AB897FD41F4A353");
 
             entity.ToTable("Game");
 
@@ -78,11 +78,11 @@ public partial class VprContext : DbContext
 
         modelBuilder.Entity<Player>(entity =>
         {
-            entity.HasKey(e => e.PlayerId).HasName("PK__Player__4A4E74C8252D71F4");
+            entity.HasKey(e => e.PlayerId).HasName("PK__Player__4A4E74C8AA7D1320");
 
             entity.ToTable("Player");
 
-            entity.HasIndex(e => new { e.FirstName, e.LastName }, "UQ__Player__2457AEF041CFE24D").IsUnique();
+            entity.HasIndex(e => new { e.FirstName, e.LastName }, "UQ__Player__2457AEF08E00948E").IsUnique();
 
             if (Database.IsSqlServer())
             {
@@ -98,7 +98,7 @@ public partial class VprContext : DbContext
 
         modelBuilder.Entity<PlayerRating>(entity =>
         {
-            entity.HasKey(e => e.PlayerRatingId).HasName("PK__PlayerRa__EC285E8B5D425B94");
+            entity.HasKey(e => e.PlayerRatingId).HasName("PK__PlayerRa__EC285E8BA0A838ED");
 
             entity.ToTable("PlayerRating");
 
@@ -123,7 +123,7 @@ public partial class VprContext : DbContext
 
         modelBuilder.Entity<TypeGame>(entity =>
         {
-            entity.HasKey(e => e.TypeGameId).HasName("PK__TypeGame__6EA2929A1F4766B4");
+            entity.HasKey(e => e.TypeGameId).HasName("PK__TypeGame__6EA2929A25BA60F6");
 
             entity.ToTable("TypeGame");
 
