@@ -10,6 +10,10 @@
     [TeamOneScore]  INT     NULL,
     [TeamTwoScore]  INT     NULL, 
     CONSTRAINT [FK_Game_TypeGame]   FOREIGN KEY ([TypeGameId]) REFERENCES [TypeGame]([TypeGameId]),
+    CONSTRAINT [FK_Game_Player_t1p1]   FOREIGN KEY ([TeamOnePlayerOneId]) REFERENCES [Player]([PlayerId]),
+    CONSTRAINT [FK_Game_Player_t1p2]   FOREIGN KEY ([TeamOnePlayerTwoId]) REFERENCES [Player]([PlayerId]),
+    CONSTRAINT [FK_Game_Player_t2p1]   FOREIGN KEY ([TeamTwoPlayerOneId]) REFERENCES [Player]([PlayerId]),
+    CONSTRAINT [FK_Game_Player_t2p2]   FOREIGN KEY ([TeamTwoPlayerTwoId]) REFERENCES [Player]([PlayerId]),
     CONSTRAINT [CK_Game_DifferentPlayers]   CHECK (
                                                          [TeamOnePlayerOneId] <> [TeamTwoPlayerOneId] AND [TeamOnePlayerOneId]<>[TeamTwoPlayerTwoId]
                                                      AND [TeamOnePlayerTwoId] <> [TeamTwoPlayerOneId] AND [TeamOnePlayerTwoId]<>[TeamTwoPlayerTwoId]
