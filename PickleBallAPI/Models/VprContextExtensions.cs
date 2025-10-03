@@ -52,15 +52,15 @@ namespace PickleBallAPI.Models
                 }
             });
 
-            modelBuilder.Entity<Game>(entity =>
-            {
-                entity
-                    .HasOne(d => d.TypeGame)
-                    .WithMany()
-                    .HasForeignKey(d => d.TypeGameId)
-                    .OnDelete(DeleteBehavior.ClientSetNull)
-                    .HasConstraintName("FK_Game_TypeGame");
-            });
+            //modelBuilder.Entity<Game>(entity =>
+            //{
+            //    entity
+            //        .HasOne(d => d.TypeGame)
+            //        .WithMany()
+            //        .HasForeignKey(d => d.TypeGameId)
+            //        .OnDelete(DeleteBehavior.ClientSetNull)
+            //        .HasConstraintName("FK_Game_TypeGame");
+            //});
 
         }
 

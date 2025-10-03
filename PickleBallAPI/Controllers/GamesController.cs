@@ -74,7 +74,7 @@ namespace PickleBallAPI.Controllers
             try
             {
                 (GameLogic.GameRatings ratings, GamePrediction gamePrediction) = await CalculatePrediction(game);
-                _context.GamePredictions.Add(gamePrediction);
+                game.GamePrediction = gamePrediction;
                 _logger.LogTrace("Game Prediction calculated and saved.");
                 var newRatings = GameLogic.CalculateNewPlayerRatings(game, ratings, gamePrediction);
                 _context.PlayerRatings.AddRange(newRatings);
@@ -121,7 +121,7 @@ namespace PickleBallAPI.Controllers
                 _logger.LogTrace("Game Saved.");
 
                 (GameLogic.GameRatings ratings, GamePrediction gamePrediction) = await CalculatePrediction(game);
-                _context.GamePredictions.Add(gamePrediction);
+                game.GamePrediction = gamePrediction;
                 await _context.SaveChangesAsync();
                 _logger.LogTrace("Game Prediction calculated and saved.");
                 var newRatings = GameLogic.CalculateNewPlayerRatings(game, ratings, gamePrediction);

@@ -10,4 +10,5 @@ public partial class TypeGame
     public string GameType { get; set; } = null!;
 
     public DateTimeOffset ChangedDate { get; set; }
+
 }

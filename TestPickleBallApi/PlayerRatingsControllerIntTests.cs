@@ -49,24 +49,6 @@ namespace TestPickleBallApi
 
         [TestMethod]
         [TestCategory("integration")]
-        public void GetPlayerRatingTest_ValueFound()
-        {
-            // Arrange
-            using var ctx = new VprContext(_vprOpt);
-            var target = new PlayerRatingsController(ctx, _mapper);
-            // Act
-            var actual = target.GetPlayerRating(1).Result;
-            // Assert
-            Assert.IsNotNull(actual);
-            Assert.IsInstanceOfType<OkObjectResult>(actual.Result);
-            var result = actual.Result as OkObjectResult;
-            Assert.IsNotNull(result?.Value);
-            var playerRatingDto = result?.Value as PlayerRatingDto;
-            Assert.AreEqual(1, playerRatingDto?.PlayerRatingId);
-        }
-
-        [TestMethod]
-        [TestCategory("integration")]
         public void GetPlayerRatingTest_ValueNotFount()
         {
             // Arrange

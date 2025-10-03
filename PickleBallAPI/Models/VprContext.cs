@@ -15,8 +15,6 @@ public partial class VprContext : DbContext
 
     public virtual DbSet<GameDetail> GameDetails { get; set; }
 
-    public virtual DbSet<GamePrediction> GamePredictions { get; set; }
-
     public virtual DbSet<Player> Players { get; set; }
 
     public virtual DbSet<PlayerRating> PlayerRatings { get; set; }
@@ -27,34 +25,15 @@ public partial class VprContext : DbContext
     {
         modelBuilder.Entity<Game>(entity =>
         {
-            entity.HasKey(e => e.GameId).HasName("PK__Game__2AB897FD41F4A353");
+            entity.HasKey(e => e.GameId).HasName("PK_Game_GameId");
 
             entity.ToTable("Game");
 
-            entity.HasOne(d => d.TeamOnePlayerOne).WithMany(p => p.GameTeamOnePlayerOnes)
-                .HasForeignKey(d => d.TeamOnePlayerOneId)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_Game_Player_t1p1");
-
-            entity.HasOne(d => d.TeamOnePlayerTwo).WithMany(p => p.GameTeamOnePlayerTwos)
-                .HasForeignKey(d => d.TeamOnePlayerTwoId)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_Game_Player_t1p2");
-
-            entity.HasOne(d => d.TeamTwoPlayerOne).WithMany(p => p.GameTeamTwoPlayerOnes)
-                .HasForeignKey(d => d.TeamTwoPlayerOneId)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_Game_Player_t2p1");
-
-            entity.HasOne(d => d.TeamTwoPlayerTwo).WithMany(p => p.GameTeamTwoPlayerTwos)
-                .HasForeignKey(d => d.TeamTwoPlayerTwoId)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_Game_Player_t2p2");
 
             entity.HasOne(d => d.TypeGame).WithMany()
                 .HasForeignKey(d => d.TypeGameId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_Game_TypeGame");
+                .HasConstraintName("FK_Game_TypeGameId");
         });
 
         modelBuilder.Entity<GameDetail>(entity =>
@@ -100,12 +79,12 @@ public partial class VprContext : DbContext
 
         modelBuilder.Entity<GamePrediction>(entity =>
         {
-            entity.HasKey(e => e.GameId).HasName("PK__GamePred__2AB897FDBE93C176");
+            entity.HasKey(e => e.GameId).HasName("PK_GamePrediction_GameId");
 
             entity.ToTable("GamePrediction");
 
             entity.Property(e => e.GameId).ValueGeneratedNever();
-            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(sysdatetime())");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(sysdatetimeoffset())");
             entity.Property(e => e.ExpectT1score).HasColumnName("ExpectT1Score");
             entity.Property(e => e.ExpectT2score).HasColumnName("ExpectT2Score");
             entity.Property(e => e.T1p1rating).HasColumnName("T1P1Rating");
@@ -116,17 +95,16 @@ public partial class VprContext : DbContext
 
             entity.HasOne(d => d.Game).WithOne(p => p.GamePrediction)
                 .HasForeignKey<GamePrediction>(d => d.GameId)
-                .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_GamePrediction_Game");
         });
 
         modelBuilder.Entity<Player>(entity =>
         {
-            entity.HasKey(e => e.PlayerId).HasName("PK__Player__4A4E74C8AA7D1320");
+            entity.HasKey(e => e.PlayerId).HasName("PK_Player_PlayerId");
 
             entity.ToTable("Player");
 
-            entity.HasIndex(e => new { e.FirstName, e.LastName }, "UQ__Player__2457AEF08E00948E").IsUnique();
+            entity.HasIndex(e => new { e.FirstName, e.LastName }, "UQ_Player_FirstName_LastName").IsUnique();
 
             entity.Property(e => e.ChangedDate).HasDefaultValueSql("(sysdatetimeoffset())");
             entity.Property(e => e.FirstName).HasMaxLength(50);
@@ -135,9 +113,11 @@ public partial class VprContext : DbContext
 
         modelBuilder.Entity<PlayerRating>(entity =>
         {
-            entity.HasKey(e => e.PlayerRatingId).HasName("PK__PlayerRa__EC285E8BA0A838ED");
+            entity.HasKey(e => e.PlayerRatingId).HasName("PK_PlayerRating_PlayerRatingId");
 
             entity.ToTable("PlayerRating");
+
+            entity.HasIndex(e => new { e.PlayerId, e.GameId }, "UQ_PlayerRating_PlayerId_GameId").IsUnique();
 
             entity.Property(e => e.RatingDate).HasDefaultValueSql("(sysdatetimeoffset())");
 
@@ -153,9 +133,11 @@ public partial class VprContext : DbContext
 
         modelBuilder.Entity<TypeGame>(entity =>
         {
-            entity.HasKey(e => e.TypeGameId).HasName("PK__TypeGame__6EA2929A25BA60F6");
+            entity.HasKey(e => e.TypeGameId).HasName("PK_TypeGame_TypeGameId");
 
             entity.ToTable("TypeGame");
+
+            entity.HasIndex(e => e.GameType, "UQ_TypeGame_GameType").IsUnique();
 
             entity.Property(e => e.ChangedDate).HasDefaultValueSql("(sysdatetimeoffset())");
             entity.Property(e => e.GameType).HasMaxLength(20);

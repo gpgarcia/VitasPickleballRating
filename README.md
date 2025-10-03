@@ -13,6 +13,12 @@ To regenerate the EF model from the database, run the following command in the P
 Scaffold-DbContext -Connection "Server=(localdb)\ProjectModels;Database=vpr;Integrated Security=True;" Microsoft.EntityFrameworkCore.SqlServer -NoOnConfiguring -Force -OutputDir Models
 
 ```
+
+Next remove Redundant Navigational properties.
+1. `DbSet<GamePrediction>`
+1. TypeGame.Games
+1. Player.TeamXPlayerY (4 of them)
+
 ### Warning
 To get the 'Generate Code Map to work, deploy vpr to (localdb)\MSSQLlocalDB.
 
