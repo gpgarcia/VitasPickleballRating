@@ -13,6 +13,8 @@ To regenerate the EF model from the database, run the following command in the P
 Scaffold-DbContext -Connection "Server=(localdb)\ProjectModels;Database=vpr;Integrated Security=True;" Microsoft.EntityFrameworkCore.SqlServer -NoOnConfiguring -Force -OutputDir Models
 
 ```
+### Warning
+To get the 'Generate Code Map to work, deploy vpr to (localdb)\MSSQLlocalDB.
 
 ### Database Schema
 The Schema is shown [Here](./VPR_Schema.png)

@@ -23,6 +23,8 @@ public partial class Game
 
     public int? TeamTwoScore { get; set; }
 
+    public virtual GamePrediction? GamePrediction { get; set; }
+
     public virtual ICollection<PlayerRating> PlayerRatings { get; set; } = new List<PlayerRating>();
 
     public virtual Player TeamOnePlayerOne { get; set; } = null!;

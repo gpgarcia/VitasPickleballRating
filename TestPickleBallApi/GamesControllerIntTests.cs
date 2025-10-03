@@ -38,9 +38,10 @@ namespace TestPickleBallApi
         public void CtorTest()
         {
             // Arrange
+            var log = _loggerFactory.CreateLogger<GamesController>();
             using var ctx = new VprContext(_vprOpt);
             // Act
-            var target = new GamesController(ctx,_mapper);
+            var target = new GamesController(ctx,_mapper, log);
             // Assert
             Assert.IsNotNull(target);
             ctx.Dispose();  //double dispose test; no exceptions!!
@@ -50,23 +51,27 @@ namespace TestPickleBallApi
         public void GetGameTest_ValueFound()
         {
             // Arrange
+            var log = _loggerFactory.CreateLogger<GamesController>();
             using var ctx = new VprContext(_vprOpt);
-            var target = new GamesController(ctx, _mapper);
+            var target = new GamesController(ctx, _mapper, log);
             // Act
             var actual = target.GetGame(1).Result;
             // Assert
             Assert.IsNotNull(actual);
-            Assert.IsInstanceOfType<ActionResult<GameDto>>(actual);
-            Assert.IsNotNull(actual.Value);
-            Assert.AreEqual(1, actual.Value.GameId);
+            Assert.IsInstanceOfType<OkObjectResult>(actual.Result);
+            var result = actual.Result as OkObjectResult;
+            Assert.IsNotNull(result?.Value);
+            var gameDto = result?.Value as GameDto;
+            Assert.AreEqual(1, gameDto?.GameId);
         }
         [TestMethod]
         [TestCategory("integration")]
         public void GetGameTest_ValueNotFount()
         {
             // Arrange
+            var log = _loggerFactory.CreateLogger<GamesController>();
             using var ctx = new VprContext(_vprOpt);
-            var target = new GamesController(ctx, _mapper);
+            var target = new GamesController(ctx, _mapper, log);
             // Act
             var actual = target.GetGame(-1).Result;
             // Assert

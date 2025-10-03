@@ -1,12 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using AutoMapper;
-using Microsoft.AspNetCore.Http;
+﻿using AutoMapper;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using PickleBallAPI.Models;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace PickleBallAPI.Controllers
 {
@@ -32,7 +30,7 @@ namespace PickleBallAPI.Controllers
                 .ToListAsync()
                 ;
             PlayerRatingDto[] ratingDtos = _mapper.Map<PlayerRatingDto[]>(ratings);
-            return ratingDtos;
+            return Ok(ratingDtos);
         }
 
         // GET: api/PlayerRatings/5
@@ -52,42 +50,33 @@ namespace PickleBallAPI.Controllers
             var player = await _context.Players.FindAsync(playerRating.PlayerId);
 
             var ratingDto = _mapper.Map<PlayerRatingDto>(playerRating);
-            return ratingDto;
+            return Ok(ratingDto);
         }
 
         // PUT: api/PlayerRatings/5
-        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
+        // To protect from over posting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPut("{id}")]
         public async Task<IActionResult> PutPlayerRating(int id, PlayerRatingDto playerRatingDto)
         {
             if (id != playerRatingDto.PlayerRatingId)
             {
-                return BadRequest();
+                return BadRequest("Id mismatch");
             }
+
+            if (!PlayerRatingExists(id))
+            {
+                return NotFound($"No Player Rating with PlayerRatingId={id}");
+            }
+
             var playerRating = _mapper.Map<PlayerRating>(playerRatingDto);
             _context.Entry(playerRating).State = EntityState.Modified;
 
-            try
-            {
-                await _context.SaveChangesAsync();
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                if (!PlayerRatingExists(id))
-                {
-                    return NotFound();
-                }
-                else
-                {
-                    throw;
-                }
-            }
-
+            await _context.SaveChangesAsync();
             return NoContent();
         }
 
         // POST: api/PlayerRatings
-        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
+        // To protect from over posting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPost]
         public async Task<ActionResult<PlayerRatingDto>> PostPlayerRating(PlayerRatingDto playerRatingDto)
         {

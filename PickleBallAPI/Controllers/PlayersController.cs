@@ -27,12 +27,9 @@ namespace PickleBallAPI.Controllers
         [HttpGet]
         public async Task<ActionResult<IEnumerable<PlayerDto>>> GetPlayers()
         {
-            var players = await _context
-                .Players
-                .ToListAsync()
-                ;
+            var players = await _context.GetAllPlayersAsync();
             PlayerDto[] playerDtos = _mapper.Map<PlayerDto[]>(players);
-            return playerDtos;
+            return Ok(playerDtos);
 
         }
 
@@ -40,39 +37,44 @@ namespace PickleBallAPI.Controllers
         [HttpGet("{id}")]
         public async Task<ActionResult<PlayerDto>> GetPlayer(int id)
         {
-            var player = await _context
-                .Players
-                .FirstOrDefaultAsync(p=>p.PlayerId == id)
-                ;
+            var player = await _context.GetPlayerByIdAsync(id);
 
             if (player == null)
             {
                 return NotFound();
             }
             var playerDto = _mapper.Map<PlayerDto>(player);
-            return playerDto;
+            return Ok(playerDto);
         }
 
         // GET: api/Players/4/PlayerRatings
         [HttpGet("{playerId}/PlayerRatings")]
         public async Task<ActionResult<IEnumerable<PlayerRatingDto>>> GetPlayerRatings(int playerId)
         {
-            var playerRatings = await _context
-                .PlayerRatings
-                .Where(p => p.PlayerId == playerId)
-                .ToListAsync()
-                ;
-
-            if (playerRatings == null)
+            if (!_context.PlayerExists(playerId))
             {
                 return NotFound();
             }
+            var playerRatings = await _context.GetPlayerRatingsAsync(playerId);
             var playerRatingDto = _mapper.Map<PlayerRatingDto[]>(playerRatings);
-            return playerRatingDto;
+            return Ok(playerRatingDto);
+        }
+
+        // GET /api/Players/{playerId}/PlayerRatings/LatestBefore?date=YYYY-MM-DD
+        [HttpGet("{playerId}/PlayerRatings/LatestBefore/{date}")]
+        public async Task<IActionResult> GetLatestRatingBeforeDate(int playerId, DateTime date)
+        {
+            var rating = await _context.GetLatestPlayerRatingBeforeDateAsync(playerId, date);
+
+            if (rating == null)
+            {
+                return NotFound();
+            }
+            return Ok(rating);
         }
 
         // PUT: api/Players/5
-        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
+        // To protect from over posting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPut("{id}")]
         public async Task<IActionResult> PutPlayer(int id, PlayerDto playerDto)
         {
@@ -89,7 +91,7 @@ namespace PickleBallAPI.Controllers
             }
             catch (DbUpdateConcurrencyException)
             {
-                if (!PlayerExists(id))
+                if (!_context.PlayerExists(id))
                 {
                     return NotFound();
                 }
@@ -103,7 +105,7 @@ namespace PickleBallAPI.Controllers
         }
 
         // POST: api/Players
-        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
+        // To protect from over posting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPost]
         public async Task<ActionResult<Player>> PostPlayer(PlayerDto playerDto)
         {
@@ -130,9 +132,5 @@ namespace PickleBallAPI.Controllers
         //    return NoContent();
         //}
 
-        private bool PlayerExists(int id)
-        {
-            return _context.Players.Any(e => e.PlayerId == id);
-        }
     }
 }

@@ -46,6 +46,7 @@ namespace TestPickleBallApi
             Assert.IsNotNull(target);
             ctx.Dispose();  //double dispose test; no exceptions!!
         }
+
         [TestMethod]
         [TestCategory("integration")]
         public void GetPlayerRatingTest_ValueFound()
@@ -57,9 +58,11 @@ namespace TestPickleBallApi
             var actual = target.GetPlayerRating(1).Result;
             // Assert
             Assert.IsNotNull(actual);
-            Assert.IsInstanceOfType<ActionResult<PlayerRatingDto>>(actual);
-            Assert.IsNotNull(actual.Value);
-            Assert.AreEqual(1, actual.Value.PlayerRatingId);
+            Assert.IsInstanceOfType<OkObjectResult>(actual.Result);
+            var result = actual.Result as OkObjectResult;
+            Assert.IsNotNull(result?.Value);
+            var playerRatingDto = result?.Value as PlayerRatingDto;
+            Assert.AreEqual(1, playerRatingDto?.PlayerRatingId);
         }
 
         [TestMethod]

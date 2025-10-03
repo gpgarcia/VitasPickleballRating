@@ -67,6 +67,7 @@
     <Build Include="Tables\TypeGame.sql" />
     <Build Include="Views\GameDetails.sql" />
     <Build Include="Tables\PlayerRating.sql" />
+    <Build Include="Tables\GamePrediction.sql" />
   </ItemGroup>
   <ItemGroup>
     <RefactorLog Include="vpr.refactorlog" />
