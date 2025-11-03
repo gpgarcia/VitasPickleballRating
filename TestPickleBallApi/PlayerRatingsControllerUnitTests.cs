@@ -24,35 +24,44 @@ namespace TestPickleBallApi
         public void TestInit()
         {
             // This method is called before each test method.
-            _loggerFactory = LoggerFactory.Create(builder => { builder.AddConsole(); });
+
+            _loggerFactory = LoggerFactory.Create(builder =>
+            {
+                builder.AddConsole();
+                // Set default minimum log level for all categories
+                builder.SetMinimumLevel(LogLevel.Trace);
+                // Set a specific log level for a category using a wildcard
+                builder.AddFilter("Microsoft.EntityFrameworkCore.*", LogLevel.Debug);
+
+            });
+
             _connection = new SqliteConnection("DataSource=:memory:");
             _vprOpt = new DbContextOptionsBuilder<VprContext>()
+                .UseLoggerFactory(_loggerFactory)
+                .EnableSensitiveDataLogging()
+                .EnableDetailedErrors()
                 .UseSqlite(_connection)
                 .Options;
             _connection.Open();
             using var ctx = new VprContext(_vprOpt);
             ctx.Database.EnsureCreated();
+
             _mapper = new Mapper(new MapperConfiguration(cfg => cfg.AddProfile<PickleBallProfile> (), _loggerFactory));
 
             using var setupCtx = new VprContext(_vprOpt);
-            Player player =
-                new()
-                {
-                    PlayerId = 1,
-                    FirstName = "Test",
-                    LastName = "Player"
-                };
-            setupCtx.Players.Add(player);
+            TestHelper.SetupLookupData(setupCtx);
+            TestHelper.SetupPlayerData(setupCtx);
+            TestHelper.SetupGameData(setupCtx);
 
-            var playerRating =
-                new PlayerRating
-                {
-                    PlayerRatingId = 1,
-                    PlayerId = 1,
-                    Rating = 300,
-                    RatingDate = DateTimeOffset.Now,
-                    //GameId = 1
-                };
+
+            var playerRating = new PlayerRating
+            {
+                PlayerRatingId = 1,
+                PlayerId = 1,
+                Rating = 300,
+                RatingDate = DateTimeOffset.Now,
+                GameId = 1
+            };
             setupCtx.PlayerRatings.Add(playerRating);
             setupCtx.SaveChanges();
         }
@@ -91,8 +100,9 @@ namespace TestPickleBallApi
             Assert.IsNotNull(actual);
             Assert.IsInstanceOfType<OkObjectResult>(actual.Result);
             var result = actual.Result as OkObjectResult;
-            var playerDto = (result?.Value as PlayerDto)!;
-            var list = result?.Value as IEnumerable<PlayerRatingDto>;
+            Assert.IsNotNull(result);
+            var playerDto = (result.Value as PlayerDto)!;
+            var list = result.Value as IEnumerable<PlayerRatingDto>;
             Assert.IsNotNull(list);
             Assert.AreEqual(1, list.First().PlayerRatingId);
         }
@@ -125,10 +135,16 @@ namespace TestPickleBallApi
             var actual = target.GetPlayerRating(-1).Result;
             // Assert
             Assert.IsNotNull(actual);
+            Assert.IsInstanceOfType<NotFoundResult>(actual.Result);
+            var result = actual.Result as NotFoundResult;
+            Assert.IsNotNull(result);
+            result.StatusCode.Equals(404);  
+            Assert.IsNull(actual.Value);
         }
+
         [TestMethod]
         [TestCategory("unit")]
-        public void PostPlayerRatingTest()
+        public void PostPlayerRatingTest_ValidData()
         {
             // Arrange
             using var ctx = new VprContext(_vprOpt);
@@ -138,7 +154,7 @@ namespace TestPickleBallApi
                 PlayerId = 1,
                 Rating = 300,
                 RatingDate = DateTimeOffset.Now,
-                //GameId = 1
+                GameId = 2
             };
             var target = new PlayerRatingsController(ctx, _mapper);
             // Act
@@ -201,6 +217,7 @@ namespace TestPickleBallApi
             {
                 PlayerRatingId = 1,
                 PlayerId = 1,
+                GameId = 1,
                 Rating = 400,
                 RatingDate = DateTimeOffset.Now,
             };

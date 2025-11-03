@@ -5,6 +5,8 @@ using Microsoft.Extensions.Logging;
 using PickleBallAPI;
 using PickleBallAPI.Controllers;
 using PickleBallAPI.Models;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace TestPickleBallApi
 {
@@ -19,8 +21,19 @@ namespace TestPickleBallApi
         public void TestInit()
         {
             // This method is called before each test method.
-            _loggerFactory = LoggerFactory.Create(builder => { builder.AddConsole(); });
+            _loggerFactory = LoggerFactory.Create(builder =>
+            {
+                builder.AddConsole();
+                // Set default minimum log level for all categories
+                builder.SetMinimumLevel(LogLevel.Trace);
+                // Set a specific log level for a category using a wildcard
+                builder.AddFilter("Microsoft.EntityFrameworkCore.*", LogLevel.Information);
+
+            });
             _vprOpt = new DbContextOptionsBuilder<VprContext>()
+                .UseLoggerFactory(_loggerFactory)
+                .EnableSensitiveDataLogging()
+                .EnableDetailedErrors()
                 .UseSqlServer("Server=(localdb)\\ProjectModels;Database=vpr;Integrated Security=True;")
                 .Options;
             _mapper = new Mapper(new MapperConfiguration(cfg => cfg.AddProfile<PickleBallProfile> (), _loggerFactory));
@@ -48,6 +61,43 @@ namespace TestPickleBallApi
         }
 
         [TestMethod]
+        [TestCategory("unit")]
+        public void GetPlayerRatingsTest_ReturnAllValues()
+        {
+            // Arrange
+            using var ctx = new VprContext(_vprOpt);
+            var target = new PlayerRatingsController(ctx, _mapper);
+            // Act
+            var actual = target.GetPlayerRatings().Result;
+            // Assert
+            Assert.IsNotNull(actual);
+            Assert.IsInstanceOfType<OkObjectResult>(actual.Result);
+            var result = actual.Result as OkObjectResult;
+            Assert.IsNotNull(result);
+            var playerDto = (result.Value as PlayerDto)!;
+            var list = result.Value as IEnumerable<PlayerRatingDto>;
+            Assert.IsNotNull(list);
+        }
+
+        [TestMethod]
+        [TestCategory("integration")]
+        public void GetPlayerRatingTest_ValueFound()
+        {
+            // Arrange
+            using var ctx = new VprContext(_vprOpt);
+            var target = new PlayerRatingsController(ctx, _mapper);
+            // Act
+            var actual = target.GetPlayerRating(1).Result;
+            // Assert
+            Assert.IsNotNull(actual);
+            Assert.IsInstanceOfType<NotFoundResult>(actual.Result);
+            var result = actual.Result as NotFoundResult;
+            Assert.IsNotNull(result);
+            Assert.AreEqual(404, result.StatusCode);
+        }
+
+
+        [TestMethod]
         [TestCategory("integration")]
         public void GetPlayerRatingTest_ValueNotFount()
         {
@@ -58,8 +108,9 @@ namespace TestPickleBallApi
             var actual = target.GetPlayerRating(-1).Result;
             // Assert
             Assert.IsNotNull(actual);
-            Assert.IsInstanceOfType<ActionResult<PlayerRatingDto>>(actual);
-            Assert.IsNotNull(actual.Result);
+            Assert.IsInstanceOfType<NotFoundResult>(actual.Result);
+            var result = actual.Result as NotFoundResult;
+            Assert.IsNotNull(result);
             Assert.IsNull(actual.Value);
         }
 

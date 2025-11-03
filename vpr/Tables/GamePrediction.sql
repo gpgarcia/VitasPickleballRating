@@ -1,6 +1,6 @@
 ﻿CREATE TABLE [dbo].[GamePrediction]
 (
-    [GameId]      INT   NOT NULL, 
+    GameId        INT   NOT NULL, 
     T1P1Rating    INT   NOT NULL,
     T1P2Rating    INT   NOT NULL,
     T2P1Rating    INT   NOT NULL,

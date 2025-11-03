@@ -25,29 +25,44 @@ namespace TestPickleBallApi
         [TestInitialize]
         public void Setup()
         {
+            _loggerFactory = LoggerFactory.Create(builder =>
+            {
+                builder.AddConsole();
+                // Set default minimum log level for all categories
+                builder.SetMinimumLevel(LogLevel.Trace);
+                // Set a specific log level for a category using a wildcard
+                builder.AddFilter("Microsoft.EntityFrameworkCore.*", LogLevel.Debug);
+
+            });
             _connection = new SqliteConnection("DataSource=:memory:");
             _connection.Open();
 
             _options = new DbContextOptionsBuilder<VprContext>()
                 .UseSqlite(_connection)
+                .UseLoggerFactory(_loggerFactory)
+                .EnableSensitiveDataLogging()
+                .EnableDetailedErrors()
                 .Options;
 
             using var context = new VprContext(_options);
             context.Database.EnsureCreated();
 
-            _loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
             _mapper = new Mapper(new MapperConfiguration(cfg => cfg.AddProfile<PickleBallProfile>(), _loggerFactory));
 
             using var seedContext = new VprContext(_options);
-            var player = new Player { PlayerId = 1, FirstName = "Test", LastName = "Player" };
-            seedContext.Players.Add(player);
 
-            seedContext.PlayerRatings.AddRange(new List<PlayerRating>
-            {
-                new PlayerRating { PlayerRatingId = 1, PlayerId = 1, Rating = 400, RatingDate = new DateTime(2025, 01, 01) },
-                new PlayerRating { PlayerRatingId = 2, PlayerId = 1, Rating = 500, RatingDate = new DateTime(2025, 06, 01) },
-                new PlayerRating { PlayerRatingId = 3, PlayerId = 1, Rating = 600, RatingDate = new DateTime(2025, 09, 15) }
-            });
+
+            TestHelper.SetupLookupData(seedContext);
+            TestHelper.SetupPlayerData(seedContext);
+            TestHelper.SetupGameData(seedContext);
+
+            List<PlayerRating> ratings =
+            [
+                new PlayerRating{ PlayerRatingId = 1, PlayerId = 1, GameId=1, Rating=400, RatingDate=DateTimeOffset.Parse("2025-01-01 18:11"), Game =null!, Player=null! },
+                new PlayerRating{ PlayerRatingId = 2, PlayerId = 1, GameId=2, Rating=500, RatingDate=DateTimeOffset.Parse("2025-06-01 18:22"), Game =null!, Player=null! },
+                new PlayerRating{ PlayerRatingId = 3, PlayerId = 1, GameId=3, Rating=600, RatingDate=DateTimeOffset.Parse("2025-09-15 18:33"), Game =null!, Player=null! },
+            ];
+            seedContext.PlayerRatings.AddRange(ratings);
 
             seedContext.SaveChanges();
         }
@@ -71,7 +86,8 @@ namespace TestPickleBallApi
             Assert.IsInstanceOfType(result.Result, typeof(OkObjectResult));
             var okResult = (result.Result as OkObjectResult)!;
             var players = okResult.Value as IEnumerable<PlayerDto>;
-            Assert.AreEqual(1, players?.Count());
+            Assert.IsNotNull(players);
+            Assert.AreEqual(4, players.Count());
         }
 
         [TestMethod]
@@ -113,7 +129,8 @@ namespace TestPickleBallApi
             var okResult = (result.Result as OkObjectResult)!;
             Assert.IsNotNull(okResult.Value);
             var ratings = okResult.Value as IEnumerable<PlayerRatingDto>;
-            Assert.AreEqual(3, ratings?.Count());
+            Assert.IsNotNull(ratings);
+            Assert.AreEqual(3, ratings.Count());
         }
 
         [TestMethod]
@@ -137,8 +154,9 @@ namespace TestPickleBallApi
             var result = await controller.GetLatestRatingBeforeDate(1, new DateTime(2025, 09, 01)) as OkObjectResult;
 
             Assert.IsNotNull(result);
-            var rating = result.Value as PlayerRating;
-            Assert.AreEqual(500, rating?.Rating);
+            var rating = result.Value as PlayerRatingDto;
+            Assert.IsNotNull(rating);
+            Assert.AreEqual(500, rating.Rating);
         }
 
         [TestMethod]

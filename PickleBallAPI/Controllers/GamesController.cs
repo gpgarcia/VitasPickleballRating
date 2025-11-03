@@ -4,34 +4,21 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using PickleBallAPI.Models;
 using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 
 namespace PickleBallAPI.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class GamesController : ControllerBase
+    public class GamesController(VprContext context, IMapper mapper, ILogger<GamesController> logger) : ControllerBase
     {
-        private readonly VprContext _context;
-        private readonly IMapper _mapper;
-        private readonly ILogger<GamesController> _logger;
-
-        public GamesController(VprContext context, IMapper mapper, ILogger<GamesController> logger)
-        {
-            _mapper = mapper;
-            _context = context;
-            _logger = logger;
-        }
-
         // GET: api/Games
         [HttpGet]
         public async Task<ActionResult<IEnumerable<GameDto>>> GetGames()
         {
-            var games = await _context.GetAllGamesAsync();
-            GameDto[] gameDtos = _mapper.Map<IEnumerable<Game>, GameDto[]>(games);
+            var games = await context.GetAllGamesAsync();
+            GameDto[] gameDtos = mapper.Map<IEnumerable<Game>, GameDto[]>(games);
             return Ok(gameDtos);
         }
 
@@ -39,12 +26,12 @@ namespace PickleBallAPI.Controllers
         [HttpGet("{id}")]
         public async Task<ActionResult<GameDto>> GetGame(int id)
         {
-            var game = await _context.GetGameAsync(id);
+            var game = await context.GetGameAsync(id);
             if (game == null)
             {
                 return NotFound();
             }
-            return Ok(_mapper.Map<GameDto>(game));
+            return Ok(mapper.Map<GameDto>(game));
         }
 
         // PUT: api/Games/5
@@ -53,7 +40,7 @@ namespace PickleBallAPI.Controllers
         public async Task<IActionResult> PutGame(int id, GameDto gameDto)
         {
             //TODO: implement optimistic concurrency
-            _logger.LogTrace("Received request to update a game.");
+            logger.LogTrace("Received request to update a game.");
             if (id != gameDto.GameId)
             {
                 return BadRequest("Id does not match game data");
@@ -61,31 +48,31 @@ namespace PickleBallAPI.Controllers
             var msg = GameLogic.ValidateGame(gameDto);
             if (msg == string.Empty)  // only validate players if the game is valid
             {
-                msg = GameLogic.ValidateGamePlayers(_context, gameDto);
+                msg = GameLogic.ValidateGamePlayers(context, gameDto);
             }
             if (msg != string.Empty)
             {
                 return BadRequest(msg);
             }
-            var game = _mapper.Map<Game>(gameDto);
-
-            _context.Entry(game).State = EntityState.Modified;
+            var game = mapper.Map<Game>(gameDto);
 
             try
             {
+                context.Entry(game).State = EntityState.Modified;
                 (GameLogic.GameRatings ratings, GamePrediction gamePrediction) = await CalculatePrediction(game);
+                context.Entry(gamePrediction).State = EntityState.Modified;
                 game.GamePrediction = gamePrediction;
-                _logger.LogTrace("Game Prediction calculated and saved.");
+                logger.LogTrace("Game Prediction calculated and added.");
                 var newRatings = GameLogic.CalculateNewPlayerRatings(game, ratings, gamePrediction);
-                _context.PlayerRatings.AddRange(newRatings);
-                _logger.LogTrace("Player Ratings saved.");
+                context.PlayerRatings.AddRange(newRatings);
+                logger.LogTrace("Player Ratings added.");
 
-                await _context.SaveChangesAsync();
-                _logger.LogTrace("All Saved.");
+                await context.SaveChangesAsync();
+                logger.LogTrace("All Saved.");
             }
             catch (DbUpdateConcurrencyException)
             {
-                if (!_context.GameExists(id))
+                if (!context.GameExists(id))
                 {
                     return NotFound();
                 }
@@ -102,40 +89,39 @@ namespace PickleBallAPI.Controllers
         [HttpPost]
         public async Task<ActionResult<GameDto>> PostGame(GameDto gameDto)
         {
-            _logger.LogTrace("Received request to add a new game.");
+            logger.LogTrace("Received request to update a game.");
             var msg = GameLogic.ValidateGame(gameDto);
-            await using var transaction = await _context.Database.BeginTransactionAsync();
+            await using var transaction = await context.Database.BeginTransactionAsync();
             try
             {
                 if (msg == string.Empty)  // only validate players if the game is valid
                 {
-                    msg = GameLogic.ValidateGamePlayers(_context, gameDto);
+                    msg = GameLogic.ValidateGamePlayers(context, gameDto);
                 }
                 if (msg != string.Empty)
                 {
                     return BadRequest(msg);
                 }
-                var game = _mapper.Map<Game>(gameDto);
-                _context.Games.Add(game);
-                await _context.SaveChangesAsync();
-                _logger.LogTrace("Game Saved.");
+                var game = mapper.Map<Game>(gameDto);
+                context.Games.Add(game);
+                logger.LogTrace("Game Saved.");
 
                 (GameLogic.GameRatings ratings, GamePrediction gamePrediction) = await CalculatePrediction(game);
                 game.GamePrediction = gamePrediction;
-                await _context.SaveChangesAsync();
-                _logger.LogTrace("Game Prediction calculated and saved.");
+                logger.LogTrace("Game Prediction calculated and saved.");
                 var newRatings = GameLogic.CalculateNewPlayerRatings(game, ratings, gamePrediction);
-                _context.PlayerRatings.AddRange(newRatings);
-
-                await _context.SaveChangesAsync();
-                _logger.LogTrace("Player Ratings saved.");
+                context.PlayerRatings.AddRange(newRatings);
+                await context.SaveChangesAsync();
+                logger.LogTrace("Player Ratings saved.");
                 await transaction.CommitAsync();
 
-                return CreatedAtAction("GetGame", new { id = game.GameId }, gameDto);
+                var result = CreatedAtAction("GetGame", new { id = game.GameId }, gameDto);
+                context.Entry(game).State = EntityState.Detached;
+                return result;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error occurred while saving the game. Rolling back transaction.");
+                logger.LogError(ex, "Error occurred while saving the game. Rolling back transaction.");
                 await transaction.RollbackAsync();
                 return StatusCode(500, "An error occurred while saving the game.");
             }
@@ -148,8 +134,8 @@ namespace PickleBallAPI.Controllers
         {
             var playedAt = game.PlayedDate ?? DateTimeOffset.Now;
             var gameId = game.GameId;
-            _logger.LogTrace("Calculating Game Prediction  for game {gameId} played at {playedAt}.", gameId, playedAt);
-            var ratings = await GameLogic.GetPlayerRatings(_context, game, playedAt);
+            logger.LogTrace("Calculating Game Prediction  for game {gameId} played at {playedAt}.", gameId, playedAt);
+            var ratings = await GameLogic.GetPlayerRatingsAsync(context, game, playedAt);
             var gamePrediction = GameLogic.GetGamePrediction(game.GameId, playedAt, ratings);
             return (ratings, gamePrediction);
         }

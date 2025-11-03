@@ -9,19 +9,6 @@ Post-Deployment Script Template
                SELECT * FROM [$(TableName)]                    
 --------------------------------------------------------------------------------------
 */
-insert into [dbo].[Player] 
-    ([FirstName], [LastName])
-VALUES 
-    ('Jean-Michael', 'Querol'),
-    ('Keenan', 'Rodriguez'),
-    ('Goutham', 'Kanddibanda'),
-    ('Gerardo', 'Garcia'),
-    ('Samuel', 'Horowitz'),
-    ('Denise', 'Sleem'),
-    ('Fernando', 'Paz') ,
-    ('William', 'Waddell'),
-    ('Francisco', 'Vela') 
-    ;
 
 insert into [dbo].[TypeGame] 
     ([GameType])
@@ -29,6 +16,22 @@ VALUES
     ('Recreational'),
     ('Tournament')
     ;
+    
+insert into [dbo].[Player] 
+    ([FirstName], [LastName])
+VALUES 
+    ('Jean-Michael', 'Querol'), --1
+    ('Keenan', 'Rodriguez'),    --2
+    ('Goutham', 'Kanddibanda'), --3
+    ('Gerardo', 'Garcia'),      --4
+    ('Samuel', 'Horowitz'),     --5
+    ('Denise', 'Sleem'),        --6
+    ('Fernando', 'Paz') ,       --7
+    ('William', 'Waddell'),     --8
+    ('Francisco', 'Vela'),      --9
+    ('Alex', 'Fisher')          --10
+    ;
+
 
 insert into [dbo].[Game] 
     ([PlayedDate], [TypeGameId], [TeamOnePlayerOneId], [TeamOnePlayerTwoId], [TeamOneScore], [TeamTwoPlayerOneId], [TeamTwoPlayerTwoId],  [TeamTwoScore])
@@ -65,5 +68,12 @@ Values
     , ('2025-08-28 19:17 -4:00', 1, 3,8, 11, 4,9, 6)
     , ('2025-08-28 19:30 -4:00', 1, 3,8, 11, 4,9, 5)
     , ('2025-08-28 19:58 -4:00', 1, 3,8, 11, 4,9, 5)
-
+    -- sixth session one indoor
+    , ('2025-10-16 18:45 -4:00', 1, 3,8, 11, 7,10, 5)
+    , ('2025-10-16 18:57 -4:00', 1, 3,7, 11, 8,10, 5)
+    , ('2025-10-16 19:04 -4:00', 1, 7,8, 11, 3,10, 0)
+    -- seventh session one indoor
+    , ('2025-10-30 18:19 -4:00', 1, 7,9, 11, 3,10, 4)
+    , ('2025-10-30 18:36 -4:00', 1, 3,9, 11, 7,10, 6)
+    , ('2025-10-30 20:23 -4:00', 1, 7,10, 11, 3,9, 8)
 ;

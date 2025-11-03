@@ -1,34 +1,24 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using AutoMapper;
-using Microsoft.AspNetCore.Http;
+﻿using AutoMapper;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using PickleBallAPI.Models;
+using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace PickleBallAPI.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class PlayersController : ControllerBase
+    public class PlayersController(VprContext context, IMapper mapper) : ControllerBase
     {
-        private readonly VprContext _context;
-        private readonly IMapper _mapper;
-
-        public PlayersController(VprContext context, IMapper mapper)
-        {
-            _context = context;
-            _mapper = mapper;
-        }
 
         // GET: api/Players
         [HttpGet]
         public async Task<ActionResult<IEnumerable<PlayerDto>>> GetPlayers()
         {
-            var players = await _context.GetAllPlayersAsync();
-            PlayerDto[] playerDtos = _mapper.Map<PlayerDto[]>(players);
+            var players = await context.GetAllPlayersAsync();
+            PlayerDto[] playerDtos = mapper.Map<PlayerDto[]>(players);
             return Ok(playerDtos);
 
         }
@@ -37,13 +27,13 @@ namespace PickleBallAPI.Controllers
         [HttpGet("{id}")]
         public async Task<ActionResult<PlayerDto>> GetPlayer(int id)
         {
-            var player = await _context.GetPlayerByIdAsync(id);
+            var player = await context.GetPlayerByIdAsync(id);
 
             if (player == null)
             {
                 return NotFound();
             }
-            var playerDto = _mapper.Map<PlayerDto>(player);
+            var playerDto = mapper.Map<PlayerDto>(player);
             return Ok(playerDto);
         }
 
@@ -51,12 +41,12 @@ namespace PickleBallAPI.Controllers
         [HttpGet("{playerId}/PlayerRatings")]
         public async Task<ActionResult<IEnumerable<PlayerRatingDto>>> GetPlayerRatings(int playerId)
         {
-            if (!_context.PlayerExists(playerId))
+            if (!context.PlayerExists(playerId))
             {
                 return NotFound();
             }
-            var playerRatings = await _context.GetPlayerRatingsAsync(playerId);
-            var playerRatingDto = _mapper.Map<PlayerRatingDto[]>(playerRatings);
+            var playerRatings = await context.GetPlayerRatingsAsync(playerId);
+            var playerRatingDto = mapper.Map<PlayerRatingDto[]>(playerRatings);
             return Ok(playerRatingDto);
         }
 
@@ -64,13 +54,16 @@ namespace PickleBallAPI.Controllers
         [HttpGet("{playerId}/PlayerRatings/LatestBefore/{date}")]
         public async Task<IActionResult> GetLatestRatingBeforeDate(int playerId, DateTime date)
         {
-            var rating = await _context.GetLatestPlayerRatingBeforeDateAsync(playerId, date);
+            var rating = await context
+                .GetLatestPlayerRatingBeforeDateAsync(playerId, date)
+                ;
 
             if (rating == null)
             {
                 return NotFound();
             }
-            return Ok(rating);
+            var ratingDto = mapper.Map<PlayerRatingDto>(rating);
+            return Ok(ratingDto);
         }
 
         // PUT: api/Players/5
@@ -82,16 +75,16 @@ namespace PickleBallAPI.Controllers
             {
                 return BadRequest();
             }
-            var player = _mapper.Map<Player>(playerDto);
-            _context.Entry(player).State = EntityState.Modified;
+            var player = mapper.Map<Player>(playerDto);
+            context.Entry(player).State = EntityState.Modified;
 
             try
             {
-                await _context.SaveChangesAsync();
+                await context.SaveChangesAsync();
             }
             catch (DbUpdateConcurrencyException)
             {
-                if (!_context.PlayerExists(id))
+                if (!context.PlayerExists(id))
                 {
                     return NotFound();
                 }
@@ -109,9 +102,9 @@ namespace PickleBallAPI.Controllers
         [HttpPost]
         public async Task<ActionResult<Player>> PostPlayer(PlayerDto playerDto)
         {
-            var player = _mapper.Map<Player>(playerDto);
-            _context.Players.Add(player);
-            await _context.SaveChangesAsync();
+            var player = mapper.Map<Player>(playerDto);
+            context.Players.Add(player);
+            await context.SaveChangesAsync();
 
             return CreatedAtAction("GetPlayer", new { id = player.PlayerId }, playerDto);
         }

@@ -9,13 +9,13 @@ public partial class PlayerRating
 
     public int PlayerId { get; set; }
 
-    public int? GameId { get; set; }
+    public int GameId { get; set; }
 
     public int Rating { get; set; }
 
     public DateTimeOffset RatingDate { get; set; }
 
-    public virtual Game? Game { get; set; }
+    public virtual Game Game { get; set; } = null!;
 
     public virtual Player Player { get; set; } = null!;
 }

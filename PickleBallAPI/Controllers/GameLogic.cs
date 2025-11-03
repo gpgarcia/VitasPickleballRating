@@ -7,57 +7,86 @@ namespace PickleBallAPI.Controllers
 {
     public static class GameLogic
     {
-        private const int MinimumRating = 200;
+        public static int MinimumRating { get;} = 200;
 
         public static string ValidateGame(GameDto gameDto)
         {
+            string msg = string.Empty;
             if (gameDto == null)
             {
-                return "Game data is null.\n";
+                msg += "Game data is null.\n";
+                return msg;
             }
             if (gameDto.TeamOnePlayerOne == null)
             {
-                return "Team One Player One can not be NULL";
+                msg += "Team One Player One can not be NULL\n";
             }
             if (gameDto.TeamTwoPlayerOne == null)
             {
-                return "Team Two Player One can not be NULL";
+                msg += "Team Two Player One can not be NULL\n";
             }
-            if (gameDto.TeamOnePlayerOne.PlayerId == gameDto.TeamOnePlayerTwo.PlayerId)
+            if (gameDto.TeamOnePlayerOne == null || gameDto.TeamTwoPlayerOne == null)
             {
-                return "Team One cannot have the same player twice.";
+                return msg;
+            }
+            if (gameDto.TeamOnePlayerOne.PlayerId == gameDto.TeamOnePlayerTwo?.PlayerId)
+            {
+                msg += "Team One cannot have the same player twice.\n";
             }
             if (gameDto.TeamTwoPlayerOne.PlayerId == gameDto.TeamTwoPlayerTwo.PlayerId)
             {
-                return "Team Two cannot have the same player twice.";
+                msg += "Team Two cannot have the same player twice.\n";
             }
             if (gameDto.TeamOnePlayerOne.PlayerId == gameDto.TeamTwoPlayerOne.PlayerId ||
                 gameDto.TeamOnePlayerOne.PlayerId == gameDto.TeamTwoPlayerTwo.PlayerId)
             {
-                return "Player can not be on both teams.";
+                msg += "Player can not be on both teams.\n";
             }
             if (gameDto.TeamOnePlayerTwo != null &&
                 (gameDto.TeamOnePlayerTwo.PlayerId == gameDto.TeamTwoPlayerOne.PlayerId ||
                  gameDto.TeamOnePlayerTwo.PlayerId == gameDto.TeamTwoPlayerTwo.PlayerId))
             {
-                return "Player can not be on both teams.";
+                msg += "Player can not be on both teams.\n";
             }
             if (gameDto.TeamOneScore.HasValue && gameDto.TeamTwoScore.HasValue)
             {
                 if (gameDto.TeamOneScore < 0 || gameDto.TeamTwoScore < 0)
                 {
-                    return "Scores can not be negative.";
+                    msg += "Scores can not be negative.\n";
                 }
                 if (gameDto.TeamOneScore == gameDto.TeamTwoScore)
                 {
-                    return "Scores can not be tied.";
+                    msg += "Scores can not be tied.\n";
                 }
                 if (gameDto.PlayedDate == null)
                 {
-                    return "If scores are provided, a played date must be provided.";
+                    msg += "If scores are provided, a played date must be provided.\n";
                 }
             }
-            return string.Empty;
+            if (gameDto.PlayedDate != null)
+            {
+                if (!gameDto.TeamOneScore.HasValue || !gameDto.TeamTwoScore.HasValue)
+                {
+                    msg += "If a played date is provided, both scores must be provided.\n";
+                }
+                if (gameDto.PlayedDate > DateTimeOffset.Now)
+                {
+                    msg += "Played date can not be in the future.\n";
+                }
+            }
+            if (gameDto.PlayedDate == null)
+            {
+                if (gameDto.TeamOneScore.HasValue || gameDto.TeamTwoScore.HasValue)
+                {
+                    msg += "If date is not provide, then both score must be NULL\n";
+                }
+            }
+            if (gameDto.TypeGameId == 0)
+            {
+                msg += "Valid TypeGameId must be present.\n";
+            }
+
+            return msg;
         }
 
         public static string ValidateGamePlayers(VprContext ctx, GameDto gameDto)
@@ -80,14 +109,14 @@ namespace PickleBallAPI.Controllers
             }
         }
 
-        public static async Task<GameRatings> GetPlayerRatings(VprContext ctx, Game game, DateTimeOffset playedAt)
+        public static async Task<GameRatings> GetPlayerRatingsAsync(VprContext ctx, Game game, DateTimeOffset playedAt)
         {
             return new GameRatings
             {
                 T1P1 = await GetRating(game.TeamOnePlayerOneId, playedAt),
-                T1P2 = await GetRating(game.TeamOnePlayerOneId, playedAt),
-                T2P1 = await GetRating(game.TeamOnePlayerOneId, playedAt),
-                T2P2 = await GetRating(game.TeamOnePlayerOneId, playedAt),
+                T1P2 = await GetRating(game.TeamOnePlayerTwoId, playedAt),
+                T2P1 = await GetRating(game.TeamTwoPlayerOneId, playedAt),
+                T2P2 = await GetRating(game.TeamTwoPlayerTwoId, playedAt),
             };
             // Helper function to fetch rating
             async Task<int> GetRating(int playerId, DateTimeOffset playedAt)
@@ -145,12 +174,12 @@ namespace PickleBallAPI.Controllers
 
         }
 
-        public static IEnumerable<PlayerRating> CalculateNewPlayerRatings(Game game, GameLogic.GameRatings ratings, GamePrediction gamePrediction)
+        public static IEnumerable<PlayerRating> CalculateNewPlayerRatings(Game game, GameRatings ratings, GamePrediction gamePrediction)
         {
             List<PlayerRating> newRatings = [];
             if (game.PlayedDate != null)
             {
-                var PlayerRatings = GameLogic.GetNewPlayerRatings(game, gamePrediction, ratings);
+                var PlayerRatings = GetNewPlayerRatings(game, gamePrediction, ratings);
                 foreach (var pr in PlayerRatings)
                 {
                     newRatings.Add(pr);
@@ -161,10 +190,11 @@ namespace PickleBallAPI.Controllers
         public static GamePrediction GetGamePrediction(int gameId, DateTimeOffset playedAt, GameRatings ratings)
         {
             double expectedOutcome = EloCalculator.ExpectedTeamOutcome(ratings.T1P1, ratings.T1P2, ratings.T2P1, ratings.T2P2);
-            (int t1Score, int t2Score) = GameLogic.CalculateExpectedScore(expectedOutcome);
+            (int t1Score, int t2Score) = CalculateExpectedScore(expectedOutcome);
             var gamePrediction = new GamePrediction
             {
                 GameId = gameId,
+                Game = null!,
                 CreatedAt = playedAt,
                 T1p1rating = ratings.T1P1,
                 T1p2rating = ratings.T1P2,
@@ -196,6 +226,7 @@ namespace PickleBallAPI.Controllers
                         Rating = newP1Rating,
                         RatingDate = (DateTimeOffset)game.PlayedDate!,
                         GameId = game.GameId,
+                        Game = null!,
                     },
                     new()
                     {
@@ -203,6 +234,7 @@ namespace PickleBallAPI.Controllers
                         Rating = newP2rating,
                         RatingDate = (DateTimeOffset)game.PlayedDate!,
                         GameId = game.GameId,
+                        Game = null!,
                     },
                     new()
                     {
@@ -210,6 +242,7 @@ namespace PickleBallAPI.Controllers
                         Rating = newP3Rating,
                         RatingDate = (DateTimeOffset)game.PlayedDate!,
                         GameId = game.GameId,
+                        Game = null!,   
                     },
                     new()
                     {
@@ -217,6 +250,7 @@ namespace PickleBallAPI.Controllers
                         Rating = newP4rating,
                         RatingDate = (DateTimeOffset)game.PlayedDate!,
                         GameId = game.GameId,
+                        Game = null!, 
                     },
                 ];
             }

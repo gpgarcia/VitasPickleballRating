@@ -10,25 +10,40 @@ namespace PickleBallAPI
     {
         public PickleBallProfile()
         {
-            CreateMap<PlayerRating, PlayerRatingDto>().ReverseMap();
-            CreateMap<TypeGame, TypeGameDto>().ReverseMap();
-            CreateMap<Player, PlayerDto>().ReverseMap();
-            //CreateMap<Game, GameDto>().ReverseMap();
+            CreateMap<TypeGameDto,TypeGame>()
+                .ForMember(dest=> dest.Games, opt=>opt.Ignore())
+                .ForMember(dest => dest.ChangedDate, opt => opt.Ignore())
+                .ReverseMap()
+                ;
+            CreateMap<PlayerRatingDto, PlayerRating>()
+                .ForMember(dest => dest.Game, opt => opt.Ignore())
+                .AfterMap((src, dest) =>
+                {
+                    // Ensure navigation properties are null to avoid EF Core tracking issues
+                    dest.Player = null!;
+                    dest.Game = null!;
+                })
+                .ReverseMap()
+                ;
 
+            CreateMap<PlayerDto, Player>()
+                .ForMember(dest => dest.ChangedDate, opt=>opt.Ignore())
+                .ForMember(dest=> dest.PlayerRatings, opt=> opt.Ignore())   
+                //.ForMember(dest => dest.GameTeamOnePlayerOnes, opt => opt.Ignore())
+                //.ForMember(dest => dest.GameTeamOnePlayerTwos, opt => opt.Ignore())
+                //.ForMember(dest => dest.GameTeamTwoPlayerOnes, opt => opt.Ignore())
+                //.ForMember(dest => dest.GameTeamTwoPlayerTwos, opt => opt.Ignore())
+                .ReverseMap()
+                ;
 
             CreateMap<GameDto, Game>()
+                .ForMember(dest => dest.GamePrediction, opt => opt.Ignore())
                 .ForMember(dest => dest.TeamOnePlayerOneId, opt => opt.MapFrom(src => src.TeamOnePlayerOne.PlayerId))
                 .ForMember(dest => dest.TeamOnePlayerTwoId, opt => opt.MapFrom(src => src.TeamOnePlayerTwo.PlayerId))
                 .ForMember(dest => dest.TeamTwoPlayerOneId, opt => opt.MapFrom(src => src.TeamTwoPlayerOne.PlayerId))
                 .ForMember(dest => dest.TeamTwoPlayerTwoId, opt => opt.MapFrom(src => src.TeamTwoPlayerTwo.PlayerId))
-                .ForMember(dest => dest.TypeGameId, opt => opt.MapFrom(src => src.TypeGameId))
-                .ForMember(dest => dest.PlayedDate, opt => opt.MapFrom(src => src.PlayedDate))
-                .ForMember(dest => dest.TeamOneScore, opt => opt.MapFrom(src => src.TeamOneScore))
-                .ForMember(dest => dest.TeamTwoScore, opt => opt.MapFrom(src => src.TeamTwoScore))
-                .ForMember(dest => dest.GameId, opt => opt.MapFrom(src => src.GameId))
-                .ForMember(dest => dest.GamePrediction, opt => opt.Ignore())
-                .ForMember(dest => dest.PlayerRatings, opt => opt.Ignore())
-                .AfterMap((src, dest) =>
+                .ForMember(dest => dest.PlayerRatings, opt => opt.Ignore()) 
+               .AfterMap((src, dest) =>
                 {
                     // Ensure Player navigation properties are null to avoid EF Core tracking issues
                     dest.TeamOnePlayerOne = null!;
@@ -37,11 +52,9 @@ namespace PickleBallAPI
                     dest.TeamTwoPlayerTwo = null!;
                     dest.TypeGame = null!;
                     dest.GamePrediction = null!;
-                    dest.PlayerRatings = null!;
                 })
                 .ReverseMap()
                 ;
-
         }
     }
 }
