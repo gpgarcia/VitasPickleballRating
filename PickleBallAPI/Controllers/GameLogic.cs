@@ -7,8 +7,6 @@ namespace PickleBallAPI.Controllers
 {
     public static class GameLogic
     {
-        public static int MinimumRating { get;} = 200;
-
         public static string ValidateGame(GameDto gameDto)
         {
             string msg = string.Empty;
@@ -122,7 +120,7 @@ namespace PickleBallAPI.Controllers
             async Task<int> GetRating(int playerId, DateTimeOffset playedAt)
             {
                 var PlayerRating = await ctx.GetLatestPlayerRatingBeforeDateAsync(playerId, playedAt);
-                return PlayerRating?.Rating ?? MinimumRating;
+                return PlayerRating?.Rating ?? EloCalculator.InitialRating;
             }
         }
 

@@ -12,4 +12,7 @@ public partial class PlayerDto
 
     public string LastName { get; set; } = null!;
 
+    public int? LastRating { get; set; } = null!;
+
+
 }

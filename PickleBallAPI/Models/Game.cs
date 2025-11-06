@@ -25,8 +25,6 @@ public partial class Game
 
     public virtual GamePrediction? GamePrediction { get; set; }
 
-    public virtual ICollection<PlayerRating> PlayerRatings { get; set; } = new List<PlayerRating>();
-
     public virtual Player TeamOnePlayerOne { get; set; } = null!;
 
     public virtual Player TeamOnePlayerTwo { get; set; } = null!;

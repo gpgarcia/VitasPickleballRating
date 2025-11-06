@@ -68,3 +68,12 @@ select  p.FirstName
     group by p.FirstName
     order by 5 desc, 2 desc
 
+-- player Ratings Last
+select  rn = ROW_NUMBER() OVER (PARTITION BY p.PlayerId ORDER BY pr.RatingDate DESC),
+        p.FirstName,
+        pr.Rating,
+        pr.RatingDate
+from    [vpr].[dbo].[PlayerRating] pr
+join    [vpr].[dbo].[Player] p on pr.PlayerId = p.PlayerId
+where   pr.RatingDate <= GETDATE()
+order by p.PlayerId, pr.RatingDate desc

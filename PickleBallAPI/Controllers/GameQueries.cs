@@ -36,6 +36,7 @@ public static class GameQueries
             .Include(g => g.TeamOnePlayerTwo)
             .Include(g => g.TeamTwoPlayerOne)
             .Include(g => g.TeamTwoPlayerTwo)
+            .Include(g => g.GamePrediction)
             .FirstOrDefaultAsync(g => g.GameId == id)
             ;
         return game;

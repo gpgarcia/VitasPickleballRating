@@ -169,7 +169,7 @@ namespace TestPickleBallApi
             //assert    
             Assert.IsNotNull(actual);
             Assert.IsInstanceOfType<GameLogic.GameRatings>(actual);
-            Assert.AreEqual(200, actual.T1P1); // new player default rating
+            Assert.AreEqual(250, actual.T1P1); // new player default rating
             Assert.AreEqual(300, actual.T1P2); // existing player
             Assert.AreEqual(400, actual.T2P1); // existing player
             Assert.AreEqual(500, actual.T2P2); // existing player

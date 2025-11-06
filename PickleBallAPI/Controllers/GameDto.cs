@@ -21,4 +21,6 @@ public partial class GameDto
     public PlayerDto TeamTwoPlayerTwo { get; set; } = null!;
 
     public virtual TypeGameDto TypeGame { get; set; } = null!;
+
+    public GamePredictionDto? GamePrediction { get; set; }
 }

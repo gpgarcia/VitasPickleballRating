@@ -5,7 +5,9 @@ namespace PickleBallAPI.Controllers;
 public static class EloCalculator
 {
     const double scaleFactor =59.0;
-    const int minRating = 200;   // ratings cannot drop below this value
+    public static int MinimumRating { get; } = 200;
+    public static int InitialRating { get; } = 250;
+
 
     public static double ExpectedTeamOutcome(int player1Rating, int player2Rating, int oppo3Rating, int oppo4Rating)
     {
@@ -28,8 +30,8 @@ public static class EloCalculator
         var p2w = (double)player2Rating / (double)(player1Rating + player2Rating);
 
         var change = kFactor * (actualOutcome - expectedOutcome);
-        var p1r = Math.Max(Math.Round(player1Rating + change * p1w), minRating);
-        var p2r = Math.Max(Math.Round(player2Rating + change * p2w), minRating);
+        var p1r = Math.Max(Math.Round(player1Rating + change * p1w), MinimumRating);
+        var p2r = Math.Max(Math.Round(player2Rating + change * p2w), MinimumRating);
         return ((int)p1r, (int)p2r);
     }
 

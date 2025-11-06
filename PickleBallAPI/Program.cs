@@ -1,18 +1,12 @@
+using AutoMapper;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using PickleBallAPI.Controllers;
-using PickleBallAPI.Models;
-using System;
-using AutoMapper;
-using System.Configuration;
-using Humanizer.Configuration;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using System.Reflection;
-using PickleBallAPI;
-using Microsoft.Build.Logging;
+using PickleBallAPI.Models;
+using System;
 
 namespace PickleBallAPI;
 
@@ -34,7 +28,6 @@ public static class Program
         var mapper = app.Services.GetRequiredService<IMapper>();
         mapper.ConfigurationProvider.AssertConfigurationIsValid();
 #endif
-
         app.UseHttpsRedirection();
         app.UseAuthorization();
         app.MapControllers();
@@ -46,16 +39,27 @@ public static class Program
     {
         // Add services to the container.
 
-        var conString = builder.Configuration.GetConnectionString("vpr") ??
-             throw new InvalidOperationException("Connection string 'Vpr' not found.");
-        builder.Services.AddDbContext<VprContext>(options =>
-        options.UseSqlServer(conString));
-
         var loggerFactory = LoggerFactory.Create(builder =>
         {
             builder.AddConsole();
+            // Set default minimum log level for all categories
+            builder.SetMinimumLevel(LogLevel.Trace);
+            // Set a specific log level for a category using a wildcard
+            builder.AddFilter("Microsoft.EntityFrameworkCore.*", LogLevel.Information);
+            builder.AddFilter("Microsoft.AspNetCore.*", LogLevel.Warning);
         });
         builder.Services.AddSingleton(loggerFactory);
+
+        var conString = builder.Configuration.GetConnectionString("vpr") ??
+             throw new InvalidOperationException("Connection string 'Vpr' not found.");
+        builder.Services.AddDbContext<VprContext>(options =>
+            options
+                .UseSqlServer(conString)
+#if DEBUG
+                .UseLoggerFactory(loggerFactory)
+                .EnableSensitiveDataLogging()
+#endif
+        );
 
         var configuration = new MapperConfiguration(cfg => cfg.AddProfile<PickleBallProfile>(), loggerFactory);
         builder.Services.AddSingleton<IMapper>(sp => new Mapper(configuration, sp.GetService));

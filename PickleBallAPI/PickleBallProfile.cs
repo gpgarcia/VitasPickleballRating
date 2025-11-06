@@ -1,7 +1,6 @@
 ﻿using AutoMapper;
 using PickleBallAPI.Controllers;
 using PickleBallAPI.Models;
-using System.Collections.Generic;
 
 namespace PickleBallAPI
 {
@@ -11,7 +10,6 @@ namespace PickleBallAPI
         public PickleBallProfile()
         {
             CreateMap<TypeGameDto,TypeGame>()
-                .ForMember(dest=> dest.Games, opt=>opt.Ignore())
                 .ForMember(dest => dest.ChangedDate, opt => opt.Ignore())
                 .ReverseMap()
                 ;
@@ -28,11 +26,12 @@ namespace PickleBallAPI
 
             CreateMap<PlayerDto, Player>()
                 .ForMember(dest => dest.ChangedDate, opt=>opt.Ignore())
-                .ForMember(dest=> dest.PlayerRatings, opt=> opt.Ignore())   
-                //.ForMember(dest => dest.GameTeamOnePlayerOnes, opt => opt.Ignore())
-                //.ForMember(dest => dest.GameTeamOnePlayerTwos, opt => opt.Ignore())
-                //.ForMember(dest => dest.GameTeamTwoPlayerOnes, opt => opt.Ignore())
-                //.ForMember(dest => dest.GameTeamTwoPlayerTwos, opt => opt.Ignore())
+                .ForMember(dest=> dest.PlayerRatings, opt=> opt.Ignore())
+                .ReverseMap()
+                ;
+            CreateMap<GamePredictionDto, GamePrediction>()
+                .ForMember(dest => dest.Game, opt => opt.Ignore())
+                .ForMember(dest => dest.GameId, opt => opt.Ignore())
                 .ReverseMap()
                 ;
 
@@ -42,7 +41,6 @@ namespace PickleBallAPI
                 .ForMember(dest => dest.TeamOnePlayerTwoId, opt => opt.MapFrom(src => src.TeamOnePlayerTwo.PlayerId))
                 .ForMember(dest => dest.TeamTwoPlayerOneId, opt => opt.MapFrom(src => src.TeamTwoPlayerOne.PlayerId))
                 .ForMember(dest => dest.TeamTwoPlayerTwoId, opt => opt.MapFrom(src => src.TeamTwoPlayerTwo.PlayerId))
-                .ForMember(dest => dest.PlayerRatings, opt => opt.Ignore()) 
                .AfterMap((src, dest) =>
                 {
                     // Ensure Player navigation properties are null to avoid EF Core tracking issues

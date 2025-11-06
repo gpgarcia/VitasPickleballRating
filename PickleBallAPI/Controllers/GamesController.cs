@@ -2,9 +2,11 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using NuGet.Versioning;
 using PickleBallAPI.Models;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace PickleBallAPI.Controllers
@@ -41,6 +43,7 @@ namespace PickleBallAPI.Controllers
         {
             //TODO: implement optimistic concurrency
             logger.LogTrace("Received request to update a game.");
+            Game game = null!;
             if (id != gameDto.GameId)
             {
                 return BadRequest("Id does not match game data");
@@ -54,7 +57,8 @@ namespace PickleBallAPI.Controllers
             {
                 return BadRequest(msg);
             }
-            var game = mapper.Map<Game>(gameDto);
+            game = mapper.Map<Game>(gameDto);
+
 
             try
             {
@@ -83,6 +87,107 @@ namespace PickleBallAPI.Controllers
             }
             return NoContent();
         }
+        // PUT: api/Games/5/update
+        // To protect from over posting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
+        [HttpPut("{id}/update")]
+        public async Task<IActionResult> PutGameUpdate(int id)
+        {
+            logger.LogTrace("Received request to update a game base on existing data.");
+            Game game = null!;
+            var tmp = await context.GetGameAsync(id);
+            if (tmp == null)
+            {
+                return NotFound();
+            }
+            game = tmp;
+            try
+            {
+                (GameLogic.GameRatings ratings, GamePrediction gamePrediction) = await CalculatePrediction(game);
+                game.GamePrediction = gamePrediction;
+                logger.LogTrace("Game Prediction calculated and added.");
+                var newRatings = GameLogic.CalculateNewPlayerRatings(game, ratings, gamePrediction);
+                foreach (var n in newRatings)
+                {
+                    var pr = context.PlayerRatings.FirstOrDefault(pr =>
+                        pr.PlayerId == n.PlayerId &&
+                        pr.GameId == n.GameId);
+                    if(pr == null)
+                    {
+                        context.PlayerRatings.Add(n);
+                    }
+                    else
+                    {
+                        pr = n;
+                    }
+                }
+                logger.LogTrace("Player Ratings updated.");
+                await context.SaveChangesAsync();
+                logger.LogTrace("All Saved.");
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                if (!context.GameExists(id))
+                {
+                    return NotFound();
+                }
+                else
+                {
+                    throw;
+                }
+            }
+            return NoContent();
+        }
+
+        // PUT: api/Games/update
+        // To protect from over posting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
+        [HttpPut("update")]
+        public async Task<IActionResult> PutGameUpdate()
+        {
+            logger.LogTrace("update all games base on existing data.");
+            Game game = null!;
+            foreach (var id in context.Games.Select(g => g.GameId).ToList())
+            {
+                var tmp = await context.GetGameAsync(id);
+                game = tmp!;
+                try
+                {
+                    (GameLogic.GameRatings ratings, GamePrediction gamePrediction) = await CalculatePrediction(game);
+                    game.GamePrediction = gamePrediction;
+                    logger.LogTrace("Game Prediction calculated and updated.");
+                    var newRatings = GameLogic.CalculateNewPlayerRatings(game, ratings, gamePrediction);
+                    foreach (var n in newRatings)
+                    {
+                        var pr = context.PlayerRatings.FirstOrDefault(pr =>
+                            pr.PlayerId == n.PlayerId &&
+                            pr.GameId == n.GameId);
+                        if (pr == null)
+                        {
+                            context.PlayerRatings.Add(n);
+                        }
+                        else
+                        {
+                            pr = n;
+                        }
+                    }
+                    logger.LogTrace("Player Ratings updated.");
+                    await context.SaveChangesAsync();
+                    logger.LogTrace("Saved Updated Game {game.GameId}", game.GameId);
+                }
+                catch (DbUpdateConcurrencyException)
+                {
+                    if (!context.GameExists(id))
+                    {
+                        return NotFound();
+                    }
+                    else
+                    {
+                        throw;
+                    }
+                }
+            }
+            return NoContent();
+        }
+
 
         // POST: api/Games
         // To protect from over posting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
@@ -109,8 +214,12 @@ namespace PickleBallAPI.Controllers
                 (GameLogic.GameRatings ratings, GamePrediction gamePrediction) = await CalculatePrediction(game);
                 game.GamePrediction = gamePrediction;
                 logger.LogTrace("Game Prediction calculated and saved.");
-                var newRatings = GameLogic.CalculateNewPlayerRatings(game, ratings, gamePrediction);
-                context.PlayerRatings.AddRange(newRatings);
+                if ( game.PlayedDate != null)
+                {
+                    // Only calculate new ratings if the game has been played and scores exists)
+                    var newRatings = GameLogic.CalculateNewPlayerRatings(game, ratings, gamePrediction);
+                    context.PlayerRatings.AddRange(newRatings);
+                }
                 await context.SaveChangesAsync();
                 logger.LogTrace("Player Ratings saved.");
                 await transaction.CommitAsync();

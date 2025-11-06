@@ -103,6 +103,8 @@ namespace TestPickleBallApi
             var okResult = (result.Result as OkObjectResult)!;
             var playerDto = (okResult.Value as PlayerDto)!;
             Assert.AreEqual("Test", playerDto.FirstName);
+            var playerRating = playerDto.LastRating;
+            Assert.IsNotNull(playerRating);
         }
 
         [TestMethod]

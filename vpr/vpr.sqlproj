@@ -75,6 +75,5 @@
   <ItemGroup>
     <None Include="vpr.publish.xml" />
     <None Include="UtilityScripts\StdQueries.sql" />
-    <None Include="vpr_1.publish.xml" />
   </ItemGroup>
 </Project>

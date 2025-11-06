@@ -188,6 +188,16 @@ namespace TestPickleBallApi
             var gameDto = result.Value as GameDto;
             Assert.IsNotNull(gameDto);
             Assert.AreEqual(1, gameDto.GameId);
+            var gamePredictionDto = gameDto.GamePrediction;
+            Assert.IsNotNull(gamePredictionDto);
+            Assert.AreEqual(200, gamePredictionDto.T1p1rating);
+            Assert.AreEqual(600, gamePredictionDto.T1p2rating);
+            Assert.AreEqual(300, gamePredictionDto.T2p1rating); 
+            Assert.AreEqual(500, gamePredictionDto.T2p2rating); 
+            Assert.AreEqual(0.75, gamePredictionDto.T1predictedWinProb);
+            Assert.AreEqual(11, gamePredictionDto.ExpectT1score);
+            Assert.AreEqual(9, gamePredictionDto.ExpectT2score);    
+
         }
 
         [TestMethod]
@@ -477,5 +487,112 @@ namespace TestPickleBallApi
             StringAssert.Contains(result.Value as string, "does not exist");
         }
 
+        [TestMethod]
+        [TestCategory("unit")]
+        public void PutGameUpdateTest_ValidData()
+        {
+            _testLog.LogTrace("Starting PutGameUpdateTest_ValidData");
+            // Arrange
+            var log = _loggerFactory.CreateLogger<GamesController>();
+            using var ctx = new VprContext(_vprOpt);
+            var target = new GamesController(ctx, _mapper, log);
+            var gamePlayedDate = DateTimeOffset.Now.AddDays(-1);
+            var newGameDto = new GameDto
+            {
+                GameId = 2,
+                TypeGameId = 1,
+                TeamOnePlayerOne = new PlayerDto { PlayerId = 1, },
+                TeamOnePlayerTwo = new PlayerDto { PlayerId = 2, },
+                TeamTwoPlayerOne = new PlayerDto { PlayerId = 3, },
+                TeamTwoPlayerTwo = new PlayerDto { PlayerId = 4, },
+                PlayedDate = gamePlayedDate,
+                TeamOneScore = 11,
+                TeamTwoScore = 9,
+            };
+            {
+                using var setupCtx = new VprContext(_vprOpt);
+                var setup = new GamesController(setupCtx, _mapper, log);
+                // first create the game to be updated
+                var game = _mapper.Map<Game>(newGameDto);
+                setupCtx.Games.Add(game);
+                setupCtx.SaveChanges();
+            }
+            _testLog.LogTrace("PutGameTest_ValidData Initialization Complete");
+
+            // Act
+            var actual = target.PutGameUpdate(2).Result;
+
+            // Assert
+            Assert.IsNotNull(actual);
+            Assert.IsInstanceOfType<NoContentResult>(actual);
+
+            var gameInDb = ctx.Games
+                .Where(g => g.GameId == newGameDto.GameId)
+                .Include(g => g.TeamOnePlayerOne)
+                .Include(g => g.TeamOnePlayerTwo)
+                .Include(g => g.TeamTwoPlayerOne)
+                .Include(g => g.TeamTwoPlayerTwo)
+                .Include(g => g.GamePrediction)
+                .FirstOrDefault();
+            Assert.IsNotNull(gameInDb);
+            Assert.IsNotNull(gameInDb.PlayedDate);
+            Assert.AreEqual(newGameDto.PlayedDate.Value.Date, gameInDb.PlayedDate.Value.Date);
+            Assert.AreEqual(newGameDto.TeamOneScore, gameInDb.TeamOneScore);
+            Assert.AreEqual(newGameDto.TeamTwoScore, gameInDb.TeamTwoScore);
+            Assert.AreEqual(newGameDto.TeamOnePlayerOne.PlayerId, gameInDb.TeamOnePlayerOneId);
+            Assert.AreEqual(newGameDto.TeamOnePlayerTwo.PlayerId, gameInDb.TeamOnePlayerTwoId);
+            Assert.AreEqual(newGameDto.TeamTwoPlayerOne.PlayerId, gameInDb.TeamTwoPlayerOneId);
+            Assert.AreEqual(newGameDto.TeamTwoPlayerTwo.PlayerId, gameInDb.TeamTwoPlayerTwoId);
+            var playerRatingsInDb = ctx.PlayerRatings
+                .Where(pr => pr.GameId == newGameDto.GameId)
+                .ToList();
+            Assert.AreEqual(4, playerRatingsInDb.Count);
+            for ( int i = 0; i < playerRatingsInDb.Count; i++)
+            {
+                Assert.AreEqual(gameInDb.PlayedDate.Value.Date, playerRatingsInDb[0].RatingDate.Date);
+            }
+
+        }
+
+        [TestMethod]
+        [TestCategory("unit")]
+        public void PutGameUpdateTest_GameNotFound()
+        {
+            _testLog.LogTrace("Starting PutGameUpdateTest_ValidData");
+            // Arrange
+            var log = _loggerFactory.CreateLogger<GamesController>();
+            using var ctx = new VprContext(_vprOpt);
+            var target = new GamesController(ctx, _mapper, log);
+            var gamePlayedDate = DateTimeOffset.Now.AddDays(-1);
+            // game not present
+            _testLog.LogTrace("PutGameUpdateTest_ValidData Initialization Complete");
+
+            // Act
+            var actual = target.PutGameUpdate(2).Result;
+
+            // Assert
+            Assert.IsNotNull(actual);
+            Assert.IsInstanceOfType<NotFoundResult>(actual);
+        }
+
+        [TestMethod]
+        [TestCategory("unit")]
+        public void PutGameUpdateTest_All()
+        {
+            _testLog.LogTrace("Starting PutGameUpdateTest_All");
+            // Arrange
+            var log = _loggerFactory.CreateLogger<GamesController>();
+            using var ctx = new VprContext(_vprOpt);
+            var target = new GamesController(ctx, _mapper, log);
+            var gamePlayedDate = DateTimeOffset.Now.AddDays(-1);
+            _testLog.LogTrace("PutGameUpdateTest_All Initialization Complete");
+
+            // Act
+            var actual = target.PutGameUpdate().Result;
+
+            // Assert
+            Assert.IsNotNull(actual);
+            Assert.IsInstanceOfType<NoContentResult>(actual);
+        }
     }
 }

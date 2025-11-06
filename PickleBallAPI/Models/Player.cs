@@ -13,13 +13,7 @@ public partial class Player
 
     public DateTimeOffset ChangedDate { get; set; }
 
-    //public virtual ICollection<Game> GameTeamOnePlayerOnes { get; set; } = new List<Game>();
-
-    //public virtual ICollection<Game> GameTeamOnePlayerTwos { get; set; } = new List<Game>();
-
-    //public virtual ICollection<Game> GameTeamTwoPlayerOnes { get; set; } = new List<Game>();
-
-    //public virtual ICollection<Game> GameTeamTwoPlayerTwos { get; set; } = new List<Game>();
+    public int? LastRating { get; set; } = null!;
 
     public virtual ICollection<PlayerRating> PlayerRatings { get; set; } = [];
 }

@@ -90,10 +90,12 @@ namespace TestPickleBallApi
             var actual = target.GetPlayerRating(1).Result;
             // Assert
             Assert.IsNotNull(actual);
-            Assert.IsInstanceOfType<NotFoundResult>(actual.Result);
-            var result = actual.Result as NotFoundResult;
+            Assert.IsInstanceOfType<OkObjectResult>(actual.Result);
+            var result = actual.Result as OkObjectResult;
             Assert.IsNotNull(result);
-            Assert.AreEqual(404, result.StatusCode);
+            var value = result.Value as PlayerRatingDto;
+            Assert.IsNotNull(value);
+            Assert.AreEqual(1, value.PlayerRatingId);
         }
 
 

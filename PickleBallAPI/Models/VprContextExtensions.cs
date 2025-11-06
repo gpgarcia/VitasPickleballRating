@@ -8,6 +8,7 @@ namespace PickleBallAPI.Models
         {
             modelBuilder.Entity<Player>(entity =>
             {
+                entity.Ignore(e => e.LastRating);
                 if (Database.IsSqlServer())
                 {
                     entity.Property(e => e.ChangedDate).HasDefaultValueSql("SYSDATETIME()");

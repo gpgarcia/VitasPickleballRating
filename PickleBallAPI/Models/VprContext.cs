@@ -1,6 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 
 namespace PickleBallAPI.Models;
 
@@ -9,8 +7,6 @@ public partial class VprContext(DbContextOptions<VprContext> options) : DbContex
     public virtual DbSet<Game> Games { get; set; }
 
     public virtual DbSet<GameDetail> GameDetails { get; set; }
-
-    public virtual DbSet<GamePrediction> GamePredictions { get; set; }
 
     public virtual DbSet<Player> Players { get; set; }
 
@@ -26,30 +22,26 @@ public partial class VprContext(DbContextOptions<VprContext> options) : DbContex
 
             entity.ToTable("Game");
 
-            //entity.HasOne(d => d.TeamOnePlayerOne).WithMany(p => p.GameTeamOnePlayerOnes)
-            //    .HasForeignKey(d => d.TeamOnePlayerOneId)
-            //    .OnDelete(DeleteBehavior.ClientSetNull)
-            //    .HasConstraintName("FK_Game_Player_t1p1");
-
-            //entity.HasOne(d => d.TeamOnePlayerTwo).WithMany(p => p.GameTeamOnePlayerTwos)
-            //    .HasForeignKey(d => d.TeamOnePlayerTwoId)
-            //    .OnDelete(DeleteBehavior.ClientSetNull)
-            //    .HasConstraintName("FK_Game_Player_t1p2");
-
-            //entity.HasOne(d => d.TeamTwoPlayerOne).WithMany(p => p.GameTeamTwoPlayerOnes)
-            //    .HasForeignKey(d => d.TeamTwoPlayerOneId)
-            //    .OnDelete(DeleteBehavior.ClientSetNull)
-            //    .HasConstraintName("FK_Game_Player_t2p1");
-
-            //entity.HasOne(d => d.TeamTwoPlayerTwo).WithMany(p => p.GameTeamTwoPlayerTwos)
-            //    .HasForeignKey(d => d.TeamTwoPlayerTwoId)
-            //    .OnDelete(DeleteBehavior.ClientSetNull)
-            //    .HasConstraintName("FK_Game_Player_t2p2");
-
-            entity.HasOne(d => d.TypeGame).WithMany(p => p.Games)
-                .HasForeignKey(d => d.TypeGameId)
+            entity.HasOne(d => d.TeamOnePlayerOne).WithMany()
+                .HasForeignKey(d => d.TeamOnePlayerOneId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_Game_TypeGameId");
+                .HasConstraintName("FK_Game_Player_t1p1");
+
+            entity.HasOne(d => d.TeamOnePlayerTwo).WithMany()
+                .HasForeignKey(d => d.TeamOnePlayerTwoId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_Game_Player_t1p2");
+
+            entity.HasOne(d => d.TeamTwoPlayerOne).WithMany()
+                .HasForeignKey(d => d.TeamTwoPlayerOneId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_Game_Player_t2p1");
+
+            entity.HasOne(d => d.TeamTwoPlayerTwo).WithMany()
+                .HasForeignKey(d => d.TeamTwoPlayerTwoId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_Game_Player_t2p2");
+
         });
 
         modelBuilder.Entity<GameDetail>(entity =>
@@ -140,11 +132,6 @@ public partial class VprContext(DbContextOptions<VprContext> options) : DbContex
                 .IsClustered();
 
             entity.Property(e => e.RatingDate).HasDefaultValueSql("(sysdatetimeoffset())");
-
-            entity.HasOne(d => d.Game).WithMany(p => p.PlayerRatings)
-                .HasForeignKey(d => d.GameId)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_PlayerRating_game");
 
             entity.HasOne(d => d.Player).WithMany(p => p.PlayerRatings)
                 .HasForeignKey(d => d.PlayerId)

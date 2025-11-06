@@ -18,6 +18,7 @@ Next remove Redundant Navigational properties.
 1. `DbSet<GamePrediction>`
 1. TypeGame.Games
 1. Player.TeamXPlayerY (4 of them)
+1. Game.PlayerRating
 
 ### Warning
 To get the 'Generate Code Map to work, deploy vpr to (localdb)\MSSQLlocalDB.
