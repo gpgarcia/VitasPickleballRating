@@ -1,6 +1,7 @@
 ﻿using AutoMapper;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using PickleBallAPI.Controllers.DTO;
 using PickleBallAPI.Models;
 using System.Collections.Generic;
 using System.Linq;

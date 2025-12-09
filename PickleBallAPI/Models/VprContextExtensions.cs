@@ -6,53 +6,6 @@ namespace PickleBallAPI.Models
     {
         partial void OnModelCreatingPartial(ModelBuilder modelBuilder)
         {
-            modelBuilder.Entity<Player>(entity =>
-            {
-                entity.Ignore(e => e.LastRating);
-                if (Database.IsSqlServer())
-                {
-                    entity.Property(e => e.ChangedDate).HasDefaultValueSql("SYSDATETIME()");
-                }
-                else //if (Database.IsSqlite())
-                {
-                    entity.Property(e => e.ChangedDate).HasDefaultValueSql("CURRENT_TIMESTAMP");
-                }
-            });
-            modelBuilder.Entity<PlayerRating>(entity =>
-            {
-                if (Database.IsSqlServer())
-                {
-                    entity.Property(e => e.RatingDate).HasDefaultValueSql("SYSDATETIME()");
-                }
-                else //if (Database.IsSqlite())
-                {
-                    entity.Property(e => e.RatingDate).HasDefaultValueSql("CURRENT_TIMESTAMP");
-                }
-            });
-            modelBuilder.Entity<TypeGame>(entity =>
-            {
-                if (Database.IsSqlServer())
-                {
-                    entity.Property(e => e.ChangedDate).HasDefaultValueSql("SYSDATETIME()");
-                }
-                else //if (Database.IsSqlite())
-                {
-                    entity.Property(e => e.ChangedDate).HasDefaultValueSql("CURRENT_TIMESTAMP");
-                }
-            });
-
-            modelBuilder.Entity<GamePrediction>(entity =>
-            {
-                if (Database.IsSqlServer())
-                {
-                    entity.Property(e => e.CreatedAt).HasDefaultValueSql("SYSDATETIME()");
-                }
-                else //if (Database.IsSqlite())
-                {
-                    entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
-                }
-            });
-
             //modelBuilder.Entity<Game>(entity =>
             //{
             //    entity

@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 
 namespace PickleBallAPI.Models;
 
@@ -15,7 +14,7 @@ public partial class PlayerRating
 
     public DateTimeOffset RatingDate { get; set; }
 
-    public virtual Game Game { get; set; } = null!;
+    public DateTimeOffset ChangedTime { get; set; }
 
     public virtual Player Player { get; set; } = null!;
 }

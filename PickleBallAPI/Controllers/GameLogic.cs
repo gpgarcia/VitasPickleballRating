@@ -1,6 +1,8 @@
-﻿using PickleBallAPI.Models;
+﻿using PickleBallAPI.Controllers.DTO;
+using PickleBallAPI.Models;
 using System;
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace PickleBallAPI.Controllers
@@ -131,49 +133,60 @@ namespace PickleBallAPI.Controllers
         /// <param name="expectedOutcome"> Probability of victory</param>
         /// <returns> a game score tuple</returns>
         /// <exception cref="ArgumentOutOfRangeException"> when  0.0 <=expected outcome <= 1.0</exception>
-        public static (int winScore, int lossScore) CalculateExpectedScore(double expectedOutcome)
+        public static (int team1Score, int team2Score) CalculateExpectedScore(double expectedOutcome)
         {
+            var team1Wins = true;
             if (expectedOutcome < 0.0 || expectedOutcome > 1.0)
                 throw new ArgumentOutOfRangeException(nameof(expectedOutcome), "Expected outcome must be between 0 and 1.");
-            int winScore;
-            int lossScore;
-            if (expectedOutcome >= 0.550)
+            if (expectedOutcome < 0.5)
             {
-                winScore = (int)Math.Round(20 * expectedOutcome);
-                lossScore = (int)Math.Round(20 * (1 - expectedOutcome));
+                // team one looses
+                team1Wins = false;
+                expectedOutcome = 1 - expectedOutcome;
             }
-            else if (expectedOutcome >= 0.545)
+            int winScore = 15;
+            int lossScore = 14;
+            var winningScoreList = new List<int> { 11, 12, 13, 14, 15 };
+            foreach (int w in winningScoreList)
             {
-                winScore = 12;
-                lossScore = 10;
+                winScore = w;
+                var l = winScore * (1.0 / expectedOutcome - 1.0);
+                lossScore = (int)Math.Round(l);
+                if (Math.Abs(l - lossScore) < 0.5 && winScore - lossScore >= 2)
+                {
+                    break;
+                }
+                if (w == 15 && lossScore > 14)
+                {
+                    winScore = 15;
+                    lossScore = 14;
+                }
             }
-            else if (expectedOutcome >= 0.542)
+            int team1Score, team2Score;
+            (team1Score, team2Score) = AssignScore(team1Wins, winScore, lossScore);
+            return (team1Score, team2Score);
+        }
+
+        private static (int,int) AssignScore(bool team1Wins, int winScore, int lossScore)
+        {
+            int team1Score;
+            int team2Score;
+
+            if (team1Wins)
             {
-                winScore = 13;
-                lossScore = 11;
-            }
-            else if (expectedOutcome >= 0.538)
-            {
-                winScore = 14;
-                lossScore = 12;
-            }
-            else if (expectedOutcome >= 0.536)
-            {
-                winScore = 15;
-                lossScore = 13;
+                (team1Score, team2Score) = (winScore, lossScore);
             }
             else
             {
-                winScore = 15;
-                lossScore = 14;
+                (team1Score, team2Score) = (lossScore, winScore);
             }
-
-            return (winScore, lossScore);
-
+            return (team1Score, team2Score);
         }
 
-        public static IEnumerable<PlayerRating> CalculateNewPlayerRatings(Game game, GameRatings ratings, GamePrediction gamePrediction)
+        public static IEnumerable<PlayerRating> CalculateNewPlayerRatings(Game game, GameRatings ratings)
         {
+            GamePrediction gamePrediction = game.GamePrediction 
+                ?? throw new ApplicationException("Game Prediction cannot be null");
             List<PlayerRating> newRatings = [];
             if (game.PlayedDate != null)
             {
@@ -187,7 +200,7 @@ namespace PickleBallAPI.Controllers
         }
         public static GamePrediction GetGamePrediction(int gameId, DateTimeOffset playedAt, GameRatings ratings)
         {
-            double expectedOutcome = EloCalculator.ExpectedTeamOutcome(ratings.T1P1, ratings.T1P2, ratings.T2P1, ratings.T2P2);
+            double expectedOutcome = EloCalculator.ExpectedTeamOutcome2(ratings.T1P1, ratings.T1P2, ratings.T2P1, ratings.T2P2);
             (int t1Score, int t2Score) = CalculateExpectedScore(expectedOutcome);
             var gamePrediction = new GamePrediction
             {
@@ -210,6 +223,7 @@ namespace PickleBallAPI.Controllers
             List<PlayerRating> tmp = [];
             if (game.PlayedDate != null)
             {
+                var changedToken = DateTime.Now;
                 // Update player ratings based on game result
                 var kFactor = EloCalculator.CalculateKFactor(ratings.T1P1);
                 //if there is a date scores are not null
@@ -220,35 +234,35 @@ namespace PickleBallAPI.Controllers
                 [
                     new()
                     {
+                        ChangedTime = changedToken,
                         PlayerId = game.TeamOnePlayerOneId,
                         Rating = newP1Rating,
                         RatingDate = (DateTimeOffset)game.PlayedDate!,
                         GameId = game.GameId,
-                        Game = null!,
                     },
                     new()
                     {
+                        ChangedTime = changedToken,
                         PlayerId = game.TeamOnePlayerTwoId,
                         Rating = newP2rating,
                         RatingDate = (DateTimeOffset)game.PlayedDate!,
                         GameId = game.GameId,
-                        Game = null!,
                     },
                     new()
                     {
+                        ChangedTime = changedToken,
                         PlayerId = game.TeamTwoPlayerOneId,
                         Rating = newP3Rating,
                         RatingDate = (DateTimeOffset)game.PlayedDate!,
                         GameId = game.GameId,
-                        Game = null!,   
                     },
                     new()
                     {
+                        ChangedTime = changedToken,
                         PlayerId = game.TeamTwoPlayerTwoId,
                         Rating = newP4rating,
                         RatingDate = (DateTimeOffset)game.PlayedDate!,
                         GameId = game.GameId,
-                        Game = null!, 
                     },
                 ];
             }

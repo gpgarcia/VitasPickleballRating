@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 
 namespace PickleBallAPI.Models;
 
@@ -8,5 +9,5 @@ public partial class TypeGame
 
     public string GameType { get; set; } = null!;
 
-    public DateTimeOffset ChangedDate { get; set; }
+    public DateTimeOffset ChangedTime { get; set; }
 }

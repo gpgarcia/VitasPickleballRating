@@ -1,4 +1,4 @@
-﻿namespace PickleBallAPI.Controllers;
+﻿namespace PickleBallAPI.Controllers.DTO;
 
 public partial class TypeGameDto
 {

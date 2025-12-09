@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using PickleBallAPI;
 using PickleBallAPI.Controllers;
+using PickleBallAPI.Controllers.DTO;
 using PickleBallAPI.Models;
 using System.Collections.Generic;
 using System.Linq;
@@ -83,9 +84,16 @@ namespace TestPickleBallApi
         [TestCategory("integration")]
         public void GetPlayerRatingTest_ValueFound()
         {
+            //
+            // NOTE: valid after update NOT initial
             // Arrange
             using var ctx = new VprContext(_vprOpt);
             var target = new PlayerRatingsController(ctx, _mapper);
+            var setup = new GamesController(ctx, _mapper, _loggerFactory.CreateLogger<GamesController>());
+            var x = setup.PutGameUpdate().Result;   
+            Assert.IsNotNull(x);
+            var ncResult = x as NoContentResult;
+            Assert.IsNotNull(ncResult);
             // Act
             var actual = target.GetPlayerRating(1).Result;
             // Assert

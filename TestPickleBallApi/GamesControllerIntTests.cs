@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using PickleBallAPI;
 using PickleBallAPI.Controllers;
+using PickleBallAPI.Controllers.DTO;
 using PickleBallAPI.Models;
 using System.Linq;
 

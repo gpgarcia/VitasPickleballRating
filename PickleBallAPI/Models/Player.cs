@@ -11,9 +11,7 @@ public partial class Player
 
     public string LastName { get; set; } = null!;
 
-    public DateTimeOffset ChangedDate { get; set; }
+    public DateTimeOffset ChangedTime { get; set; }
 
-    public int? LastRating { get; set; } = null!;
-
-    public virtual ICollection<PlayerRating> PlayerRatings { get; set; } = [];
+    public virtual ICollection<PlayerRating> PlayerRatings { get; set; } = new List<PlayerRating>();
 }

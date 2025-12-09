@@ -1,6 +1,7 @@
 ﻿CREATE TABLE [dbo].[Game]
 (
     [GameId]        INT     NOT NULL    IDENTITY(1,1),
+    [FacilityId]    INT     NULL,
     [PlayedDate]    DATETIMEOFFSET NULL,
     [TypeGameId]    INT     NOT NULL,
     [TeamOnePlayerOneId]  INT     NOT NULL,
@@ -9,7 +10,9 @@
     [TeamTwoPlayerTwoId]  INT     NOT NULL,
     [TeamOneScore]  INT     NULL,
     [TeamTwoScore]  INT     NULL, 
+    [ChangedTime] DATETIMEOFFSET NOT NULL, -- Do not Default. This is the App level concurrency token
     CONSTRAINT [PK_Game_GameId]     PRIMARY KEY CLUSTERED ([GameId]),
+    Constraint [FK_Game_FacilityId] Foreign key ([FacilityId]) References [Facility]([FacilityId]),
     CONSTRAINT [FK_Game_TypeGameId] FOREIGN KEY ([TypeGameId]) REFERENCES [TypeGame]([TypeGameId]),
     CONSTRAINT [FK_Game_Player_t1p1] FOREIGN KEY ([TeamOnePlayerOneId]) REFERENCES [Player]([PlayerId]),
     CONSTRAINT [FK_Game_Player_t1p2] FOREIGN KEY ([TeamOnePlayerTwoId]) REFERENCES [Player]([PlayerId]),

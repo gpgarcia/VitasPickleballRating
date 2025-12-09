@@ -22,6 +22,7 @@ public static class GameQueries
             .Include(g => g.TeamOnePlayerTwo)
             .Include(g => g.TeamTwoPlayerOne)
             .Include(g => g.TeamTwoPlayerTwo)
+            .Include(g => g.Facility)
             .ToListAsync()
             ;
         return tmp;
@@ -37,6 +38,8 @@ public static class GameQueries
             .Include(g => g.TeamTwoPlayerOne)
             .Include(g => g.TeamTwoPlayerTwo)
             .Include(g => g.GamePrediction)
+            .Include(g => g.Facility)
+            .Include(g => g.Facility!.TypeFacility)
             .FirstOrDefaultAsync(g => g.GameId == id)
             ;
         return game;

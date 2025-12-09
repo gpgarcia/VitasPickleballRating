@@ -1,6 +1,6 @@
 # VitasPickleballRating
 Pickleball Rating system for use by Vitas players.
-1. It keeps track of players, teams and games played.
+1. It keeps track of players, and games played.
 1. It estimates the score of a game between two teams.
 1. It computes a new rating for each player after a game.
 1. It displays win-loss standings of player and their rating..
@@ -16,9 +16,14 @@ Scaffold-DbContext -Connection "Server=(localdb)\ProjectModels;Database=vpr;Inte
 
 Next remove Redundant Navigational properties.
 1. `DbSet<GamePrediction>`
+1. GameDetail and `DbSet<GameDetail>` and mapping.
 1. TypeGame.Games
+1. TypeFacility.Facilities
 1. Player.TeamXPlayerY (4 of them)
+1. PlayerRating.Game
 1. Game.PlayerRating
+1. Facility.TypeFacility
+1. Facility.Games
 
 ### Warning
 To get the 'Generate Code Map to work, deploy vpr to (localdb)\MSSQLlocalDB.

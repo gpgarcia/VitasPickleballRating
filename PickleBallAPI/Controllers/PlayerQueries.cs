@@ -25,14 +25,6 @@ namespace PickleBallAPI.Controllers
                 .Include(p=>p.PlayerRatings)
                 .FirstOrDefaultAsync(p => p.PlayerId == playerId)
                 ;
-            if (player != null)
-            {
-                player.LastRating = player?
-                    .PlayerRatings
-                    .OrderByDescending(r => r.RatingDate)
-                    .FirstOrDefault()?
-                    .Rating;
-            }
             return player;
         }
 

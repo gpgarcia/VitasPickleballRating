@@ -8,7 +8,7 @@
     T1PredictedWinProb  FLOAT NOT NULL,
     ExpectT1Score INT   NULL,
     ExpectT2Score INT   NULL,
-    CreatedAt     DATETIMEOFFSET NOT NULL DEFAULT SYSDATETIMEOFFSET(),
+    CreatedAt     DATETIMEOFFSET NOT NULL , -- do not default, this is the app level concurrency token
     CONSTRAINT [PK_GamePrediction_GameId] PRIMARY KEY CLUSTERED ([GameId]),
     CONSTRAINT [FK_GamePrediction_Game] FOREIGN KEY ([GameId]) REFERENCES [Game]([GameId]) ON DELETE CASCADE
 );

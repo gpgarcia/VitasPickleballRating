@@ -7,6 +7,8 @@ public partial class Game
 {
     public int GameId { get; set; }
 
+    public int? FacilityId { get; set; }
+
     public DateTimeOffset? PlayedDate { get; set; }
 
     public int TypeGameId { get; set; }
@@ -22,6 +24,10 @@ public partial class Game
     public int? TeamOneScore { get; set; }
 
     public int? TeamTwoScore { get; set; }
+
+    public DateTimeOffset ChangedTime { get; set; }
+
+    public virtual Facility? Facility { get; set; }
 
     public virtual GamePrediction? GamePrediction { get; set; }
 

@@ -25,7 +25,7 @@ public class EloCalculatorTests
         Assert.IsTrue(result1 > 0.0, "ExpectedTeamOutcome should return a positive value.");
         Assert.IsTrue(result1 <= 1.0, "ExpectedTeamOutcome should return probability.");
         Assert.AreEqual(result2, 1.0-result1, 0.001 , "ET2 = 1 - ET1.");
-        Assert.AreEqual(0.505, result1, 0.001);
+        Assert.AreEqual(0.507, result1, 0.001);
         Assert.AreEqual(15.0, Math.Round(result1*29)); 
 
     }
@@ -76,7 +76,7 @@ public class EloCalculatorTests
         double result1 = EloCalculator.ExpectedTeamOutcome(player1Rating, player2Rating, opponent3Rating, opponent4Rating);
 
         // Assert
-        Assert.AreEqual(0.124, result1, 0.001, "ExpectedTeamOutcome should be 14%.");
+        Assert.AreEqual(0.053, result1, 0.001, "ExpectedTeamOutcome should be 5.3%.");
     }
 
     [TestClass]

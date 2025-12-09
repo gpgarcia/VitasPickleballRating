@@ -68,6 +68,9 @@
     <Build Include="Views\GameDetails.sql" />
     <Build Include="Tables\PlayerRating.sql" />
     <Build Include="Tables\GamePrediction.sql" />
+    <Build Include="Views\PlayerStanding.sql" />
+    <Build Include="Tables\Facility.sql" />
+    <Build Include="Tables\TypeFacility.sql" />
   </ItemGroup>
   <ItemGroup>
     <RefactorLog Include="vpr.refactorlog" />

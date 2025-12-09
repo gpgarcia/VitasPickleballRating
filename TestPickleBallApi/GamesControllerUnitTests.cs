@@ -3,10 +3,13 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Microsoft.VisualStudio.TestPlatform.ObjectModel;
 using PickleBallAPI;
 using PickleBallAPI.Controllers;
+using PickleBallAPI.Controllers.DTO;
 using PickleBallAPI.Models;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 
 namespace TestPickleBallApi
@@ -274,8 +277,43 @@ namespace TestPickleBallApi
             Assert.AreEqual(newGameDto.TeamOnePlayerTwo.PlayerId, gameInDb.TeamOnePlayerTwoId);
             Assert.AreEqual(newGameDto.TeamTwoPlayerOne.PlayerId, gameInDb.TeamTwoPlayerOneId);
             Assert.AreEqual(newGameDto.TeamTwoPlayerTwo.PlayerId, gameInDb.TeamTwoPlayerTwoId);
-
         }
+
+
+        [TestMethod]
+        [TestCategory("unit")]
+        public void PostGameTest_InvalidPlayer()
+        {
+            _testLog.LogTrace("Starting PostGameTest_InvalidPlayer");
+            // Arrange
+            var log = _loggerFactory.CreateLogger<GamesController>();
+            using var ctx = new VprContext(_vprOpt);
+            var target = new GamesController(ctx, _mapper, log);
+            var newGameDto = new GameDto
+            {
+                GameId = 2,
+                PlayedDate = DateTimeOffset.Now,
+                TypeGameId = 1,
+                TeamOnePlayerOne = new PlayerDto { PlayerId = -1, },
+                TeamOnePlayerTwo = new PlayerDto { PlayerId = 2, },
+                TeamTwoPlayerOne = new PlayerDto { PlayerId = 3, },
+                TeamTwoPlayerTwo = new PlayerDto { PlayerId = 4, },
+                TeamOneScore = 11,
+                TeamTwoScore = 8
+            };
+            // Act
+            var actual = target.PostGame(newGameDto).Result;
+            // Assert
+            Assert.IsNotNull(actual);
+            Assert.IsInstanceOfType<BadRequestObjectResult>(actual.Result);
+            var result = actual.Result as BadRequestObjectResult;
+            Assert.IsNotNull(result);   
+            var valueStr = result.Value as string;
+            Assert.IsNotNull(valueStr);
+            StringAssert.Contains(valueStr, "does not exist");
+        }
+
+
 
         [TestMethod]
         [TestCategory("unit")]
@@ -294,6 +332,7 @@ namespace TestPickleBallApi
                 TeamOnePlayerTwo = new PlayerDto { PlayerId = 2, },
                 TeamTwoPlayerOne = new PlayerDto { PlayerId = 3, },
                 TeamTwoPlayerTwo = new PlayerDto { PlayerId = 4, },
+                // without scores or date to simulate pre-game
             };
             // Act
             var actual = target.PostGame(newGameDto).Result;
@@ -318,6 +357,7 @@ namespace TestPickleBallApi
                 .Include(g => g.TeamOnePlayerTwo)
                 .Include(g => g.TeamTwoPlayerOne)
                 .Include(g => g.TeamTwoPlayerTwo)
+                .Include(g => g.GamePrediction)
                 .FirstOrDefault();
             Assert.IsNotNull(gameInDb);
             Assert.AreEqual(newGameDto.TeamOneScore, gameInDb.TeamOneScore);
@@ -326,6 +366,16 @@ namespace TestPickleBallApi
             Assert.AreEqual(newGameDto.TeamOnePlayerTwo.PlayerId, gameInDb.TeamOnePlayerTwoId);
             Assert.AreEqual(newGameDto.TeamTwoPlayerOne.PlayerId, gameInDb.TeamTwoPlayerOneId);
             Assert.AreEqual(newGameDto.TeamTwoPlayerTwo.PlayerId, gameInDb.TeamTwoPlayerTwoId);
+            var predictionInDb = gameInDb.GamePrediction;
+            Assert.IsNotNull(predictionInDb);
+            Assert.AreEqual(200, predictionInDb.T1p1rating);
+            Assert.AreEqual(600, predictionInDb.T1p2rating);
+            Assert.AreEqual(300, predictionInDb.T2p1rating);
+            Assert.AreEqual(500, predictionInDb.T2p2rating);    
+            Assert.IsTrue(predictionInDb.CreatedAt.Date.Equals(DateTimeOffset.Now.Date));
+            Assert.IsTrue(predictionInDb.T1predictedWinProb > 0.0);
+            Assert.IsTrue(predictionInDb.T1predictedWinProb <= 1.0);
+
 
         }
 
@@ -368,6 +418,7 @@ namespace TestPickleBallApi
             newGameDto.TeamOneScore = 11;
             newGameDto.TeamTwoScore = 9;
             _testLog.LogTrace("PutGameTest_ValidData Initialization Complete");
+            _testLog.LogTrace("PutGameTest_ValidData end arrangement");
 
             // Act
             var actual = target.PutGame(4, newGameDto).Result;
@@ -489,6 +540,42 @@ namespace TestPickleBallApi
 
         [TestMethod]
         [TestCategory("unit")]
+        public void PutGameTest_DbUpdate()
+        {
+            _testLog.LogTrace("Starting PutGameTest_DbUpdate");
+            // Arrange
+            var log = _loggerFactory.CreateLogger<GamesController>();
+            using var ctx = new VprContext(_vprOpt);
+            var target = new GamesController(ctx, _mapper, log);
+            var newGameDto = new GameDto
+            {
+                GameId = 4,
+                TypeGameId = 1,
+                TeamOnePlayerOne = new PlayerDto { PlayerId = 1, },
+                TeamOnePlayerTwo = new PlayerDto { PlayerId = 2, },
+                TeamTwoPlayerOne = new PlayerDto { PlayerId = 3, },
+                TeamTwoPlayerTwo = new PlayerDto { PlayerId = 4, },
+                // without scores or date to simulate pre-game update
+            };
+
+            // now update with scores and date after game played
+            newGameDto.PlayedDate = DateTimeOffset.Now.AddDays(-1);
+            newGameDto.TeamOneScore = 11;
+            newGameDto.TeamTwoScore = 9;
+            _testLog.LogTrace("PutGameTest_ValidData end arrangement");
+
+            // Act
+            var actual = target.PutGame(4, newGameDto).Result;
+
+            // Assert
+            Assert.IsNotNull(actual);
+            Assert.IsInstanceOfType<NotFoundResult>(actual);
+
+        }
+
+
+        [TestMethod]
+        [TestCategory("unit")]
         public void PutGameUpdateTest_ValidData()
         {
             _testLog.LogTrace("Starting PutGameUpdateTest_ValidData");
@@ -551,9 +638,94 @@ namespace TestPickleBallApi
             {
                 Assert.AreEqual(gameInDb.PlayedDate.Value.Date, playerRatingsInDb[0].RatingDate.Date);
             }
-
         }
+        [TestMethod]
+        [TestCategory("unit")]
+        public void PutGameUpdateTest_PredictTeam2Wins()
+        {
+            _testLog.LogTrace("Starting PutGameUpdateTest_PredictTeam2Wins");
+            // Arrange
+            var log = _loggerFactory.CreateLogger<GamesController>();
+            using var ctx = new VprContext(_vprOpt);
+            var target = new GamesController(ctx, _mapper, log);
+            var gamePlayedDate = DateTimeOffset.Now.AddDays(-1);
+            var pr = new List<PlayerRating>
+            {
+                new() { PlayerId = 1, Rating = 257, RatingDate = gamePlayedDate.AddDays(-2), GameId = 2,},
+                new() { PlayerId = 2, Rating = 237, RatingDate = gamePlayedDate.AddDays(-3), GameId = 2, },
+                new() { PlayerId = 3, Rating = 263, RatingDate = gamePlayedDate.AddDays(-4), GameId = 2, },
+                new() { PlayerId = 4, Rating = 250, RatingDate = gamePlayedDate.AddDays(-5), GameId = 2, },
+            };
+            var game2 = new Game
+            {
+                TypeGameId = 1,
+                TeamOnePlayerOneId = 1,
+                TeamOnePlayerTwoId = 2,
+                TeamTwoPlayerOneId = 3,
+                TeamTwoPlayerTwoId = 4,
 
+            };
+            var newGameDto = new GameDto
+            {
+                GameId = 3,
+                TypeGameId = 1,
+                TeamOnePlayerOne = new PlayerDto { PlayerId = 1, },
+                TeamOnePlayerTwo = new PlayerDto { PlayerId = 2, },
+                TeamTwoPlayerOne = new PlayerDto { PlayerId = 3, },
+                TeamTwoPlayerTwo = new PlayerDto { PlayerId = 4, },
+                PlayedDate = gamePlayedDate,
+                TeamOneScore = 11,
+                TeamTwoScore = 5,
+            };
+            {
+                using var setupCtx = new VprContext(_vprOpt);
+                var setup = new GamesController(setupCtx, _mapper, log);
+                // first create the game to be updated
+                var game3 = _mapper.Map<Game>(newGameDto);
+                setupCtx.Games.Add(game2);
+                setupCtx.PlayerRatings.AddRange(pr);
+                setupCtx.Games.Add(game3);
+                setupCtx.SaveChanges();
+            }
+            _testLog.LogTrace("PutGameUpdateTest_PredictTeam2Wins Initialization Complete");
+
+            // Act
+            var actual = target.PutGameUpdate(3).Result;
+
+            // Assert
+            Assert.IsNotNull(actual);
+            Assert.IsInstanceOfType<NoContentResult>(actual);
+
+            var gameInDb = ctx.Games
+                .Where(g => g.GameId == newGameDto.GameId)
+                .Include(g => g.TeamOnePlayerOne)
+                .Include(g => g.TeamOnePlayerTwo)
+                .Include(g => g.TeamTwoPlayerOne)
+                .Include(g => g.TeamTwoPlayerTwo)
+                .Include(g => g.GamePrediction)
+                .FirstOrDefault();
+            Assert.IsNotNull(gameInDb);
+            Assert.IsNotNull(gameInDb.PlayedDate);
+            Assert.AreEqual(newGameDto.PlayedDate.Value.Date, gameInDb.PlayedDate.Value.Date);
+            Assert.AreEqual(newGameDto.TeamOneScore, gameInDb.TeamOneScore);
+            Assert.AreEqual(newGameDto.TeamTwoScore, gameInDb.TeamTwoScore);
+            Assert.AreEqual(newGameDto.TeamOnePlayerOne.PlayerId, gameInDb.TeamOnePlayerOneId);
+            Assert.AreEqual(newGameDto.TeamOnePlayerTwo.PlayerId, gameInDb.TeamOnePlayerTwoId);
+            Assert.AreEqual(newGameDto.TeamTwoPlayerOne.PlayerId, gameInDb.TeamTwoPlayerOneId);
+            Assert.AreEqual(newGameDto.TeamTwoPlayerTwo.PlayerId, gameInDb.TeamTwoPlayerTwoId);
+            Assert.IsNotNull(gameInDb.GamePrediction);
+            Assert.IsTrue(gameInDb.GamePrediction.T1predictedWinProb < 0.5);
+            Assert.AreEqual(11, gameInDb.GamePrediction.ExpectT2score);
+            Assert.AreEqual(6, gameInDb.GamePrediction.ExpectT1score);
+            var playerRatingsInDb = ctx.PlayerRatings
+                .Where(pr => pr.GameId == newGameDto.GameId)
+                .ToList();
+            Assert.AreEqual(4, playerRatingsInDb.Count);
+            for (int i = 0; i < playerRatingsInDb.Count; i++)
+            {
+                Assert.AreEqual(gameInDb.PlayedDate.Value.Date, playerRatingsInDb[1].RatingDate.Date);
+            }
+        }
         [TestMethod]
         [TestCategory("unit")]
         public void PutGameUpdateTest_GameNotFound()

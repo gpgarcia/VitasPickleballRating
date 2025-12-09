@@ -2,25 +2,71 @@
 
 namespace PickleBallAPI.Models;
 
-public partial class VprContext(DbContextOptions<VprContext> options) : DbContext(options)
+public partial class VprContext : DbContext
 {
-    public virtual DbSet<Game> Games { get; set; }
+    public VprContext(DbContextOptions<VprContext> options)
+        : base(options)
+    {
+    }
 
-    public virtual DbSet<GameDetail> GameDetails { get; set; }
+    public virtual DbSet<Facility> Facilities { get; set; }
+
+    public virtual DbSet<Game> Games { get; set; }
 
     public virtual DbSet<Player> Players { get; set; }
 
     public virtual DbSet<PlayerRating> PlayerRatings { get; set; }
 
+    public virtual DbSet<PlayerStanding> PlayerStandings { get; set; }
+
+    public virtual DbSet<TypeFacility> TypeFacilities { get; set; }
+
     public virtual DbSet<TypeGame> TypeGames { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        modelBuilder.Entity<Facility>(entity =>
+        {
+            entity.HasKey(e => e.FacilityId).HasName("PK_Facility_FacilityId");
+
+            entity.ToTable("Facility");
+
+            entity.Property(e => e.AddressLine1)
+                .HasMaxLength(50)
+                .IsUnicode(false);
+            entity.Property(e => e.AddressLine2)
+                .HasMaxLength(50)
+                .IsUnicode(false);
+            entity.Property(e => e.City)
+                .HasMaxLength(50)
+                .IsUnicode(false);
+            entity.Property(e => e.Name)
+                .HasMaxLength(50)
+                .IsUnicode(false);
+            entity.Property(e => e.Notes).IsUnicode(false);
+            entity.Property(e => e.PostalCode)
+                .HasMaxLength(11)
+                .IsUnicode(false);
+            entity.Property(e => e.StateCode)
+                .HasMaxLength(2)
+                .IsUnicode(false)
+                .IsFixedLength();
+            entity.HasOne(d => d.TypeFacility).WithMany()
+                .HasForeignKey(d => d.TypeFacilityId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_Facility_TypeFacilityId");
+
+        });
+
         modelBuilder.Entity<Game>(entity =>
         {
             entity.HasKey(e => e.GameId).HasName("PK_Game_GameId");
 
             entity.ToTable("Game");
+
+            entity.HasOne(d => d.Facility).WithMany()
+                .HasForeignKey(d => d.FacilityId)
+                .HasConstraintName("FK_Game_FacilityId");
 
             entity.HasOne(d => d.TeamOnePlayerOne).WithMany()
                 .HasForeignKey(d => d.TeamOnePlayerOneId)
@@ -42,47 +88,10 @@ public partial class VprContext(DbContextOptions<VprContext> options) : DbContex
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_Game_Player_t2p2");
 
-        });
-
-        modelBuilder.Entity<GameDetail>(entity =>
-        {
-            entity
-                .HasNoKey()
-                .ToView("GameDetails");
-
-            entity.Property(e => e.GameType).HasMaxLength(20);
-            entity.Property(e => e.Team1Player1FirstName)
-                .HasMaxLength(50)
-                .HasColumnName("team1_player1_FirstName");
-            entity.Property(e => e.Team1Player1LastName)
-                .HasMaxLength(50)
-                .HasColumnName("team1_player1_LastName");
-            entity.Property(e => e.Team1Player1PlayerId).HasColumnName("team1_player1_PlayerId");
-            entity.Property(e => e.Team1Player2FirstName)
-                .HasMaxLength(50)
-                .HasColumnName("team1_player2_FirstName");
-            entity.Property(e => e.Team1Player2LastName)
-                .HasMaxLength(50)
-                .HasColumnName("team1_player2_LastName");
-            entity.Property(e => e.Team1Player2PlayerId).HasColumnName("team1_player2_PlayerId");
-            entity.Property(e => e.Team1Score).HasColumnName("team1_Score");
-            entity.Property(e => e.Team1Win).HasColumnName("team1_Win");
-            entity.Property(e => e.Team2Player1FirstName)
-                .HasMaxLength(50)
-                .HasColumnName("team2_player1_FirstName");
-            entity.Property(e => e.Team2Player1LastName)
-                .HasMaxLength(50)
-                .HasColumnName("team2_player1_LastName");
-            entity.Property(e => e.Team2Player1PlayerId).HasColumnName("team2_player1_PlayerId");
-            entity.Property(e => e.Team2Player2FirstName)
-                .HasMaxLength(50)
-                .HasColumnName("team2_player2_FirstName");
-            entity.Property(e => e.Team2Player2LastName)
-                .HasMaxLength(50)
-                .HasColumnName("team2_player2_LastName");
-            entity.Property(e => e.Team2Player2PlayerId).HasColumnName("team2_player2_PlayerId");
-            entity.Property(e => e.Team2Score).HasColumnName("team2_Score");
-            entity.Property(e => e.Team2Win).HasColumnName("team2_Win");
+            entity.HasOne(d => d.TypeGame).WithMany()
+                .HasForeignKey(d => d.TypeGameId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_Game_TypeGameId");
         });
 
         modelBuilder.Entity<GamePrediction>(entity =>
@@ -92,7 +101,6 @@ public partial class VprContext(DbContextOptions<VprContext> options) : DbContex
             entity.ToTable("GamePrediction");
 
             entity.Property(e => e.GameId).ValueGeneratedNever();
-            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(sysdatetimeoffset())");
             entity.Property(e => e.ExpectT1score).HasColumnName("ExpectT1Score");
             entity.Property(e => e.ExpectT2score).HasColumnName("ExpectT2Score");
             entity.Property(e => e.T1p1rating).HasColumnName("T1P1Rating");
@@ -114,7 +122,6 @@ public partial class VprContext(DbContextOptions<VprContext> options) : DbContex
 
             entity.HasIndex(e => new { e.FirstName, e.LastName }, "UQ_Player_FirstName_LastName").IsUnique();
 
-            entity.Property(e => e.ChangedDate).HasDefaultValueSql("(sysdatetimeoffset())");
             entity.Property(e => e.FirstName).HasMaxLength(50);
             entity.Property(e => e.LastName).HasMaxLength(50);
         });
@@ -131,12 +138,34 @@ public partial class VprContext(DbContextOptions<VprContext> options) : DbContex
                 .IsUnique()
                 .IsClustered();
 
-            entity.Property(e => e.RatingDate).HasDefaultValueSql("(sysdatetimeoffset())");
-
             entity.HasOne(d => d.Player).WithMany(p => p.PlayerRatings)
                 .HasForeignKey(d => d.PlayerId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_PlayerRating_Player");
+        });
+
+        modelBuilder.Entity<PlayerStanding>(entity =>
+        {
+            entity
+                .HasNoKey()
+                .ToView("PlayerStanding");
+
+            entity.Property(e => e.FirstName).HasMaxLength(50);
+            entity.Property(e => e.WinPct).HasColumnType("numeric(24, 12)");
+        });
+
+        modelBuilder.Entity<TypeFacility>(entity =>
+        {
+            entity.HasKey(e => e.TypeFacilityId).HasName("PK_TypeFacility_TypeFacilityId");
+
+            entity.ToTable("TypeFacility");
+
+            entity.HasIndex(e => e.FacilityType, "UQ_TypeFacility_FacilityType").IsUnique();
+
+            entity.Property(e => e.TypeFacilityId).ValueGeneratedNever();
+            entity.Property(e => e.FacilityType)
+                .HasMaxLength(50)
+                .IsUnicode(false);
         });
 
         modelBuilder.Entity<TypeGame>(entity =>
@@ -147,7 +176,7 @@ public partial class VprContext(DbContextOptions<VprContext> options) : DbContex
 
             entity.HasIndex(e => e.GameType, "UQ_TypeGame_GameType").IsUnique();
 
-            entity.Property(e => e.ChangedDate).HasDefaultValueSql("(sysdatetimeoffset())");
+            entity.Property(e => e.TypeGameId).ValueGeneratedNever();
             entity.Property(e => e.GameType).HasMaxLength(20);
         });
 

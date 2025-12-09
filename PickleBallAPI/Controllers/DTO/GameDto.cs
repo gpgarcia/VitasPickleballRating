@@ -1,13 +1,13 @@
-﻿using PickleBallAPI.Models;
-using System;
-using System.Collections.Generic;
+﻿using System;
 
-namespace PickleBallAPI.Controllers;
+namespace PickleBallAPI.Controllers.DTO;
 public partial class GameDto
 {
     public int GameId { get; set; }
 
     public DateTimeOffset? PlayedDate { get; set; }
+
+    public FacilityDto? Facility { get; set; }
 
     public int TypeGameId { get; set; }
 

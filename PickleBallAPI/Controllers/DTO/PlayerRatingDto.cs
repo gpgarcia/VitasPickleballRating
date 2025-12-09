@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace PickleBallAPI.Controllers;
+namespace PickleBallAPI.Controllers.DTO;
 
 public partial class PlayerRatingDto
 {

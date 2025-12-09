@@ -11,6 +11,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
+using PickleBallAPI.Controllers.DTO;
 
 namespace TestPickleBallApi
 {
@@ -58,9 +59,9 @@ namespace TestPickleBallApi
 
             List<PlayerRating> ratings =
             [
-                new PlayerRating{ PlayerRatingId = 1, PlayerId = 1, GameId=1, Rating=400, RatingDate=DateTimeOffset.Parse("2025-01-01 18:11"), Game =null!, Player=null! },
-                new PlayerRating{ PlayerRatingId = 2, PlayerId = 1, GameId=2, Rating=500, RatingDate=DateTimeOffset.Parse("2025-06-01 18:22"), Game =null!, Player=null! },
-                new PlayerRating{ PlayerRatingId = 3, PlayerId = 1, GameId=3, Rating=600, RatingDate=DateTimeOffset.Parse("2025-09-15 18:33"), Game =null!, Player=null! },
+                new PlayerRating{ PlayerRatingId = 1, PlayerId = 1, GameId=1, Rating=400, RatingDate=DateTimeOffset.Parse("2025-01-01 18:11"), Player=null! },
+                new PlayerRating{ PlayerRatingId = 2, PlayerId = 1, GameId=2, Rating=500, RatingDate=DateTimeOffset.Parse("2025-06-01 18:22"), Player=null! },
+                new PlayerRating{ PlayerRatingId = 3, PlayerId = 1, GameId=3, Rating=600, RatingDate=DateTimeOffset.Parse("2025-09-15 18:33"), Player=null! },
             ];
             seedContext.PlayerRatings.AddRange(ratings);
 
@@ -103,8 +104,6 @@ namespace TestPickleBallApi
             var okResult = (result.Result as OkObjectResult)!;
             var playerDto = (okResult.Value as PlayerDto)!;
             Assert.AreEqual("Test", playerDto.FirstName);
-            var playerRating = playerDto.LastRating;
-            Assert.IsNotNull(playerRating);
         }
 
         [TestMethod]

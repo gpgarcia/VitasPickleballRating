@@ -14,7 +14,7 @@ select  gd.GameId
         , t2p2_FirstName = gd.team2_player2_FirstName
         , t2_Score = gd.team2_Score
 from [vpr].[dbo].GameDetails gd
---where gd.PlayedDate > '2025-8-28'
+--where gd.PlayedDate > '2025-11-28'
 order by gd.PlayedDate
 
 -- games played by each player
@@ -32,48 +32,47 @@ group by p.FirstName
 order by COUNT(g.GameId) desc, p.FirstName asc
 ;
 
--- standings by player
-WITH PlayerGameStats AS
-(
-    select  p.PlayerId
-            , g.GameId
-            , CASE WHEN (  g.TeamOneScore > g.TeamTwoScore 
-                        and
-                            (p.PlayerId = g.TeamOnePlayerOneId 
-                            OR  p.PlayerId = g.TeamOnePlayerTwoId)
-                        )
-                        OR ( g.TeamTwoScore > g.TeamOneScore
-                            and
-                            (p.PlayerId = g.TeamTwoPlayerOneId 
-                            OR  p.PlayerId = g.TeamTwoPlayerTwoId)
-                        )
-                   THEN  1
-                   ELSE 0 END AS Result
-    from [vpr].[dbo].[Player] p 
-    join Game  g on    p.PlayerId in (
-                            g.TeamOnePlayerOneId,
-                            g.TeamOnePlayerTwoId,
-                            g.TeamTwoPlayerOneId,
-                            g.TeamTwoPlayerTwoId
-                            )
-)
-select  p.FirstName
-    , GamesPlayed = COUNT(pg.GameId)
-    , Wins = COUNT(CASE WHEN Result = 1 THEN 1 END)
-    , Losses = COUNT(CASE WHEN Result = 0 THEN 1 END)
-    , WinPct = COUNT(CASE WHEN pg.Result = 1 THEN 1 END) * 1.0 / COUNT(pg.GameId)
-
-    from PlayerGameStats pg
-    join [vpr].[dbo].[Player] p on pg.PlayerId = p.PlayerId
-    group by p.FirstName
-    order by 5 desc, 2 desc
-
--- player Ratings Last
+-- player Ratings all
 select  rn = ROW_NUMBER() OVER (PARTITION BY p.PlayerId ORDER BY pr.RatingDate DESC),
+        p.PlayerId,
         p.FirstName,
+        p.LastName,
         pr.Rating,
         pr.RatingDate
 from    [vpr].[dbo].[PlayerRating] pr
 join    [vpr].[dbo].[Player] p on pr.PlayerId = p.PlayerId
 where   pr.RatingDate <= GETDATE()
 order by p.PlayerId, pr.RatingDate desc
+
+-- Game Prediction Accuracy Date
+Select  g.GameId
+        , g.PlayedDate
+        , gp.T1P1Rating
+        , gp.T1P2Rating
+        , gp.T2P1Rating
+        , gp.T2P2Rating
+        , gp.ExpectT1Score
+        , gp.ExpectT2Score
+        , ExpectedRatioScore = gp.ExpectT1Score / cast(gp.ExpectT1Score + gp.ExpectT2Score as float )
+        , g.TeamOneScore
+        , g.TeamTwoScore
+        , ActualRatioScore = g.TeamOneScore / Cast(g.TeamOneScore + g.TeamTwoScore as float )
+        , Team1WinsExpected = CASE WHEN gp.ExpectT1Score > gp.ExpectT2Score THEN 1 ELSE 0 END
+        , Team1Wins = CASE WHEN g.TeamOneScore > g.TeamTwoScore THEN 1 ELSE 0 END
+FROM    [vpr].[dbo].[Game] g
+JOIN    [vpr].[dbo].[GamePrediction] gp on gp.GameId = g.GameId
+WHERE   g.PlayedDate IS NOT NULL
+
+-- Player rating change base data
+Select top 100 g.GameId
+        , pr.PlayerRatingId,	pr.PlayerId,	pr.Rating
+        , gp.GameId,	gp.T1P1Rating, gp.T1P2Rating,	gp.T2P1Rating,	gp.T2P2Rating, gp.T1PredictedWinProb
+        , actualT1RatioScore = g2.TeamOneScore / Cast(g2.TeamOneScore + g2.TeamTwoScore as float )
+FROM    [vpr].[dbo].game g
+left join [vpr].[dbo].PlayerRating pr on pr.PlayerId in (g.TeamOnePlayerOneId, g.TeamOnePlayerTwoId, g.TeamTwoPlayerOneId, g.TeamTwoPlayerTwoId)
+left join [vpr].[dbo].GamePrediction gp on gp.GameId = pr.GameId
+left join [vpr].[dbo].Game g2 on g2.GameId = gp.GameId
+WHERE   g.PlayedDate >= pr.RatingDate
+AND     g.GameId = 3
+order by g.gameId, pr.PlayerId
+
