@@ -29,13 +29,21 @@ stages:
       vmImage: $(vmImageName)
     steps:
     - task: Docker@2
-      displayName: Build and push an image to container registry
+      displayName: Build an image 
       inputs:
-        command: buildAndPush
+        command: build
         arguments: --build-arg BUILD_CONFIGURATION=$(Build.Configuration)
         repository: $(imageRepository)
         buildContext: $(Build.SourcesDirectory)
         dockerfile: $(dockerfilePath)
         containerRegistry: $(dockerRegistryServiceConnection)
         tags: |
-          $(tag)
+          $(tag), latest
+    - task: Docker@2
+      displayName: push an image to container registry
+      inputs:
+        command: push
+        repository: $(imageRepository)
+        containerRegistry: $(dockerRegistryServiceConnection)
+        tags: |
+          $(tag), latest
