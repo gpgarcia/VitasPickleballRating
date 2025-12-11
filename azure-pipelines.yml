@@ -32,7 +32,7 @@ stages:
       displayName: Build and push an image to container registry
       inputs:
         command: buildAndPush
-        arguments: BUILD_CONFIGURATION=$(Build.Configuration)
+        arguments: --build-arg BUILD_CONFIGURATION=$(Build.Configuration)
         repository: $(imageRepository)
         buildContext: $(Build.SourcesDirectory)
         dockerfile: $(dockerfilePath)
