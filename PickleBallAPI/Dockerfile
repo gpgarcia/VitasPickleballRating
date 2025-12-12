@@ -16,6 +16,7 @@ COPY ["PickleBallAPI/PickleBallAPI.csproj", "PickleBallAPI/"]
 RUN dotnet restore "./PickleBallAPI/PickleBallAPI.csproj"
 COPY "./PickleBallAPI" ."PickleBallAPI/"
 WORKDIR "/src/PickleBallAPI"
+RUN ls -la
 RUN dotnet build "./PickleBallAPI.csproj" -c $BUILD_CONFIGURATION -o /app/build
 
 # This stage is used to publish the service project to be copied to the final stage
