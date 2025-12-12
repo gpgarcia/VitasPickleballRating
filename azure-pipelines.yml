@@ -38,7 +38,7 @@ stages:
         dockerfile: $(dockerfilePath)
         containerRegistry: $(dockerRegistryServiceConnection)
         tags: |
-          $(tag), latest
+          $(tag),latest
     - task: Docker@2
       displayName: push an image to container registry
       inputs:
@@ -46,4 +46,4 @@ stages:
         repository: $(imageRepository)
         containerRegistry: $(dockerRegistryServiceConnection)
         tags: |
-          $(tag), latest
+          $(tag),latest
