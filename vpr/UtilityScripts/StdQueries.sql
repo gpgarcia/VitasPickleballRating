@@ -1,8 +1,9 @@
-﻿
-select top 100 *
+﻿select top 100 *
 from [vpr].[dbo].GameDetails gd
 where gd.PlayedDate > '2025-10-16'
 order by gd.PlayedDate
+;
+go
 
 -- game summary
 select  gd.GameId
@@ -16,6 +17,8 @@ select  gd.GameId
 from [vpr].[dbo].GameDetails gd
 --where gd.PlayedDate > '2025-11-28'
 order by gd.PlayedDate
+;
+go
 
 -- games played by each player
 select p.FirstName
@@ -31,11 +34,14 @@ left join Game  g on p.PlayerId in (
 group by p.FirstName
 order by COUNT(g.GameId) desc, p.FirstName asc
 ;
+-- name=ISNULL(p.NickName, p.FirstName)
+go
 
 -- player Ratings all
 select  rn = ROW_NUMBER() OVER (PARTITION BY p.PlayerId ORDER BY pr.RatingDate DESC),
         p.PlayerId,
         p.FirstName,
+        NickName = ISNULL(p.NickName, p.FirstName),
         p.LastName,
         pr.Rating,
         pr.RatingDate
@@ -43,6 +49,8 @@ from    [vpr].[dbo].[PlayerRating] pr
 join    [vpr].[dbo].[Player] p on pr.PlayerId = p.PlayerId
 where   pr.RatingDate <= GETDATE()
 order by p.PlayerId, pr.RatingDate desc
+;
+go
 
 -- Game Prediction Accuracy Date
 Select  g.GameId
@@ -62,6 +70,9 @@ Select  g.GameId
 FROM    [vpr].[dbo].[Game] g
 JOIN    [vpr].[dbo].[GamePrediction] gp on gp.GameId = g.GameId
 WHERE   g.PlayedDate IS NOT NULL
+;
+go
+
 
 -- Player rating change base data
 Select top 100 g.GameId
@@ -75,4 +86,6 @@ left join [vpr].[dbo].Game g2 on g2.GameId = gp.GameId
 WHERE   g.PlayedDate >= pr.RatingDate
 AND     g.GameId = 3
 order by g.gameId, pr.PlayerId
+;
+go
 

@@ -16,6 +16,7 @@ VALUES
     (1, 'Recreational', SYSDATETIMEOFFSET()),
     (2, 'Tournament', SYSDATETIMEOFFSET())
     ;
+go
 
 insert into [dbo].[TypeFacility] 
     (TypeFacilityId, FacilityType)
@@ -30,8 +31,10 @@ VALUES
     (22,'Multi-Use Covered'),
     (23,'Multi-Use Indoors')
 ;
+go
 
 SET IDENTITY_INSERT [dbo].[Facility] ON;
+go
 insert into [dbo].[Facility] 
         ([FacilityId], [Name], [AddressLine1], [AddressLine2], [City], [StateCode], [PostalCode], [NumberCourts], [TypeFacilityId], [Notes],[ChangedTime])
     VALUES 
@@ -42,29 +45,37 @@ insert into [dbo].[Facility]
         (3, 'Driftwood Park', '3000 N 69th Ave', NULL, 'Hollywood', 'FL', '33024', 6, 11,
             'Hollywood City Park', SYSDATETIMEOFFSET()),
         (4, 'Bryan Park', '2301 SW 13th St', NULL, 'Miami', 'FL', '33145', 4, 21,
-            'Miami City Park, Crowded in the evenings. Padels up for next game. Lights out 8:00 PM. Pickleball on Wednesday. Friday thru Monday', SYSDATETIMEOFFSET())
+            'Miami City Park, Crowded in the evenings. Padels up for next game. Lights out 8:00 PM. Pickleball on Wednesday. Friday thru Monday', SYSDATETIMEOFFSET()),
+        (5, 'C.B. Smith Park', '900 N Flamingo Rd', null, 'Pembroke Pines', 'FL', '33028', 8, 21,
+            'Broward County Park. Free courts.', SYSDATETIMEOFFSET())
 ;
+go
 SET IDENTITY_INSERT [dbo].[Facility] OFF;
+go
 
 SET IDENTITY_INSERT [dbo].[Player] ON;
+go
 
 insert into [dbo].[Player] 
-    ([PlayerId], [FirstName], [LastName], [ChangedTime])
+    ([PlayerId], [FirstName], [LastName],[NickName], [ChangedTime])
 VALUES 
-    (1, 'Jean-Michael', 'Querol', SYSDATETIMEOFFSET()), --1
-    (2, 'Keenan', 'Rodriguez', SYSDATETIMEOFFSET()),    --2
-    (3, 'Goutham', 'Kanddibanda', SYSDATETIMEOFFSET()), --3
-    (4, 'Gerardo', 'Garcia', SYSDATETIMEOFFSET()),      --4
-    (5, 'Samuel', 'Horowitz', SYSDATETIMEOFFSET()),     --5
-    (6, 'Denise', 'Sleem', SYSDATETIMEOFFSET()),        --6
-    (7, 'Fernando', 'Paz', SYSDATETIMEOFFSET()) ,       --7
-    (8, 'William', 'Waddell', SYSDATETIMEOFFSET()),     --8
-    (9, 'Francisco', 'Vela', SYSDATETIMEOFFSET()),      --9
-    (10, 'Alex', 'Fisher', SYSDATETIMEOFFSET()),         --10
-    (11, 'Alejandro', 'Diaz', SYSDATETIMEOFFSET()) ,     --11
-    (12, 'Satish', 'Karlapudi', SYSDATETIMEOFFSET())     --12
+    (1, 'Jean-Michael', 'Querol', NULL, SYSDATETIMEOFFSET()),
+    (2, 'Keenan', 'Rodriguez', NULL, SYSDATETIMEOFFSET()),   
+    (3, 'Goutham', 'Kanddibanda',NULL, SYSDATETIMEOFFSET()), 
+    (4, 'Gerardo', 'Garcia','Gerry', SYSDATETIMEOFFSET()),   
+    (5, 'Samuel', 'Horowitz', NULL, SYSDATETIMEOFFSET()),    
+    (6, 'Denise', 'Sleem', NULL, SYSDATETIMEOFFSET()),       
+    (7, 'Fernando', 'Paz', NULL, SYSDATETIMEOFFSET()) ,      
+    (8, 'William', 'Waddell', 'Bill', SYSDATETIMEOFFSET()),  
+    (9, 'Francisco', 'Vela','Franc', SYSDATETIMEOFFSET()),   
+    (10, 'Alex', 'Fisher', NULL, SYSDATETIMEOFFSET()),       
+    (11, 'Alejandro', 'Diaz', NULL, SYSDATETIMEOFFSET()) ,   
+    (12, 'Satish', 'Karlapudi', NULL, SYSDATETIMEOFFSET()),  
+    (13, 'Naveen', 'Bisht', NULL, SYSDATETIMEOFFSET())       
     ;
+go
 SET IDENTITY_INSERT [dbo].[Player] OFF;
+go
 
 insert into [dbo].[Game] 
     (FacilityId, [PlayedDate], [TypeGameId], [TeamOnePlayerOneId], [TeamOnePlayerTwoId], [TeamOneScore], [TeamTwoPlayerOneId], [TeamTwoPlayerTwoId],  [TeamTwoScore], ChangedTime)
@@ -106,6 +117,7 @@ Values
     , (2, '2025-10-16 18:57 -4:00', 1, 3,7, 11, 8,10, 5, SYSDATETIMEOFFSET())
     , (2, '2025-10-16 19:04 -4:00', 1, 7,8, 11, 3,10, 0, SYSDATETIMEOFFSET())
     ;
+go
 
 insert into [dbo].[Game] 
     (FacilityId,[PlayedDate], [TypeGameId], [TeamOnePlayerOneId], [TeamOnePlayerTwoId], [TeamOneScore], [TeamTwoPlayerOneId], [TeamTwoPlayerTwoId],  [TeamTwoScore], ChangedTime)
@@ -128,6 +140,7 @@ Values
     --Bryan Park outdoor -- too crowded at 6:00 PM, better at 7:00. lights out at 8:20
     , (4, '2025-11-25 19:45 -4:00', 1, 4,7, 11, 3,9, 9, SYSDATETIMEOFFSET())
 ;
+go
 
 insert into [dbo].[Game] 
     (FacilityId,[PlayedDate], [TypeGameId], [TeamOnePlayerOneId], [TeamOnePlayerTwoId], [TeamOneScore], [TeamTwoPlayerOneId], [TeamTwoPlayerTwoId],  [TeamTwoScore], ChangedTime)
@@ -138,5 +151,15 @@ Values    -- Driftwood Park
     (3, '2025-12-04 18:53 -4:00', 1, 8,10, 11, 7,11,  2, SYSDATETIMEOFFSET()),
     (3, '2025-12-04 19:09 -4:00', 1, 7,8,  11, 6,9,   7, SYSDATETIMEOFFSET()),
     (3, '2025-12-04 19:32 -4:00', 1, 8,10, 11, 9,11,  8, SYSDATETIMEOFFSET()),
-    (3, '2025-12-04 19:44 -4:00', 1, 6,9,  11, 10,11, 5, SYSDATETIMEOFFSET())
+    (3, '2025-12-04 19:44 -4:00', 1, 6,9,  11, 10,11, 5, SYSDATETIMEOFFSET()),
+    -- C.B. Smith Park outdoor IT chrismas event
+    (5, '2025-12-11 15:09 -4:00', 1, 4,7, 11, 8,10, 2, SYSDATETIMEOFFSET()),
+    (5, '2025-12-11 15:26 -4:00', 1, 4,8, 11, 7,10, 7, SYSDATETIMEOFFSET()),
+    (5, '2025-12-11 15:58 -4:00', 1, 4,8, 11, 7,10, 7, SYSDATETIMEOFFSET()),
+    (5, '2025-12-11 16:07 -4:00', 1, 7,8, 11, 3,13, 2, SYSDATETIMEOFFSET()),
+    (5, '2025-12-11 16:25 -4:00', 1, 3,10, 11, 4,13, 9, SYSDATETIMEOFFSET()),
+    (5, '2025-12-11 16:45 -4:00', 1, 7,8, 11, 3,13, 3, SYSDATETIMEOFFSET()),
+    (5, '2025-12-11 15:08 -4:00', 1, 10,13, 11, 3,4, 4, SYSDATETIMEOFFSET())
+
 ;
+go

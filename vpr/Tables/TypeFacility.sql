@@ -5,4 +5,7 @@
     , CONSTRAINT PK_TypeFacility_TypeFacilityId PRIMARY KEY (TypeFacilityId)
     , CONSTRAINT UQ_TypeFacility_FacilityType UNIQUE (FacilityType)
 
-)
+);
+GO
+
+

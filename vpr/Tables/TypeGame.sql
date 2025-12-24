@@ -5,4 +5,4 @@
     [ChangedTime]   DATETIMEOFFSET  NOT NULL,
     CONSTRAINT PK_TypeGame_TypeGameId PRIMARY KEY (TypeGameId),
     CONSTRAINT UQ_TypeGame_GameType UNIQUE (GameType)
-)
+);

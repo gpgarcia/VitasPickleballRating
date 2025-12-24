@@ -24,5 +24,7 @@ left join   Player t1p1 on g.TeamOnePlayerOneId = t1p1.PlayerId
 left join   Player t1p2 on g.TeamOnePlayerTwoId = t1p2.PlayerId
 left join   Player t2p1 on g.TeamTwoPlayerOneId = t2p1.PlayerId
 left join   Player t2p2 on g.TeamTwoPlayerTwoId = t2p2.PlayerId
+;
+
 
 

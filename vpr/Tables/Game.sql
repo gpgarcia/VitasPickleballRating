@@ -27,4 +27,4 @@
     CONSTRAINT [CK_Team1_PlayersDifferent]  CHECK ([TeamOnePlayerOneId] <> [TeamOnePlayerTwoId]),
     CONSTRAINT [CK_Team2_PlayersDifferent]  CHECK ([TeamTwoPlayerOneId] <> [TeamTwoPlayerTwoId]),
 
-)
+);

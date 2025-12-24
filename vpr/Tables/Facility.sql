@@ -14,4 +14,4 @@
     ,CONSTRAINT PK_Facility_FacilityId PRIMARY KEY (FacilityId)
     ,Constraint FK_Facility_TypeFacilityID FOREIGN KEY (TypeFacilityId) REFERENCES TypeFacility(TypeFacilityId)
 
-)
+);
