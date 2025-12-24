@@ -61,7 +61,7 @@ You will not be able to publish using VS2022 and under after converting. The abo
 ### To build the Docker Image
 From the solution folder run:
 ``` sh
-docker build -f PickleBallAPI/Dockerfile -t api:latest .
+docker build -f PickleBallAPI/Dockerfile -t api:latest --build-arg BUILD_CONFIGURATION=Debug .
 ```
 ### To run the application
 ``` sh
