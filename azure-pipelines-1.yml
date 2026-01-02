@@ -23,7 +23,7 @@ steps:
 
 - task: CopyFiles@2
   inputs:
-    SourceFolder: '$(agent.builddirectory)/s/vpr/bin/$(Build.Configuration)'
+    SourceFolder: '$(agent.builddirectory)/s/vpr/bin/$(Build.Configuration)/net4.7.2'
     Contents: 'vpr.dacpac'
     TargetFolder: '$(build.artifactstagingdirectory)'
     
