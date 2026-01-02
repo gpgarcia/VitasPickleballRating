@@ -23,8 +23,8 @@ steps:
 
 - task: CopyFiles@2
   inputs:
-    SourceFolder: '$(agent.builddirectory)'
-    Contents: '**/*.dacpac'
+    SourceFolder: '$(agent.builddirectory)/bin/**'
+    Contents: 'vpr.dacpac'
     TargetFolder: '$(build.artifactstagingdirectory)'
     
 - task: PublishBuildArtifacts@1
