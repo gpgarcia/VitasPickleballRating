@@ -21,9 +21,16 @@ steps:
     command: 'build'
     projects: '**/*sqlproj'
 
-- task: PublishPipelineArtifact@1
+- task: CopyFiles@2
   inputs:
-    targetPath: '$(Pipeline.Workspace)'
-    artifact: '_dacpac'
-    publishLocation: 'pipeline'
+    SourceFolder: '$(agent.builddirectory)'
+    Contents: '**/*.dacpac'
+    TargetFolder: '$(build.artifactstagingdirectory)'
+    
+- task: PublishBuildArtifacts@1
+  inputs:
+    PathtoPublish: '$(Build.ArtifactStagingDirectory)'
+    ArtifactName: '_dacpac'
+    publishLocation: 'Container'
+
 
