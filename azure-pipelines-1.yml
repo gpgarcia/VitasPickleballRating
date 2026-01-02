@@ -16,4 +16,9 @@ steps:
     command: 'build'
     projects: '**/*sqlproj'
 
+- task: PublishPipelineArtifact@1
+  inputs:
+    targetPath: '$(Pipeline.Workspace)'
+    artifact: '**/*.dacpac'
+    publishLocation: 'pipeline'
 
