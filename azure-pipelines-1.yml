@@ -19,6 +19,6 @@ steps:
 - task: PublishPipelineArtifact@1
   inputs:
     targetPath: '$(Pipeline.Workspace)'
-    artifact: '**/*.dacpac'
+    artifact: '_dacpac'
     publishLocation: 'pipeline'
 
