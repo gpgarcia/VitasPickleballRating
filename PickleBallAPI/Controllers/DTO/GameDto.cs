@@ -1,26 +1,37 @@
 ﻿using System;
 
 namespace PickleBallAPI.Controllers.DTO;
-public partial class GameDto
-{
-    public int GameId { get; set; }
-
-    public DateTimeOffset? PlayedDate { get; set; }
-
-    public FacilityDto? Facility { get; set; }
-
-    public int TypeGameId { get; set; }
-
-    public int? TeamOneScore { get; set; }
-
-    public int? TeamTwoScore { get; set; }
-
-    public PlayerDto TeamOnePlayerOne { get; set; } = null!;
-    public PlayerDto TeamOnePlayerTwo { get; set; } = null!;
-    public PlayerDto TeamTwoPlayerOne { get; set; } = null!;
-    public PlayerDto TeamTwoPlayerTwo { get; set; } = null!;
-
-    public virtual TypeGameDto TypeGame { get; set; } = null!;
-
-    public GamePredictionDto? GamePrediction { get; set; }
-}
+/// <summary>
+/// Data transfer object that represents a game and its lightweight related metadata.
+/// </summary>
+/// <remarks>
+/// This DTO is used for API surface interactions where game details are required.
+/// Implemented as a positional record to provide concise, immutable initialization.
+/// Use the mapped domain models (e.g. <c>Game</c>) for persistence concerns.
+/// </remarks>
+/// <param name="GameId">Unique identifier for the game.</param>
+/// <param name="PlayedDate">Optional date/time when the game was played.</param>
+/// <param name="Facility">Optional facility information where the game was played.</param>
+/// <param name="TypeGameId">Identifier of the game type/category.</param>
+/// <param name="TeamOneScore">Optional score for team one.</param>
+/// <param name="TeamTwoScore">Optional score for team two.</param>
+/// <param name="TeamOnePlayerOne">Player DTO for team one, player one.</param>
+/// <param name="TeamOnePlayerTwo">Player DTO for team one, player two.</param>
+/// <param name="TeamTwoPlayerOne">Player DTO for team two, player one.</param>
+/// <param name="TeamTwoPlayerTwo">Player DTO for team two, player two.</param>
+/// <param name="TypeGame">Lightweight type-game metadata.</param>
+/// <param name="GamePrediction">Optional prediction metadata for the game.</param>
+public sealed record GameDto(
+    int? GameId = null,
+    DateTimeOffset? PlayedDate = null,
+    FacilityDto? Facility = null,
+    int? TypeGameId = null,
+    int? TeamOneScore = null,
+    int? TeamTwoScore = null,
+    PlayerDto? TeamOnePlayerOne = null,
+    PlayerDto? TeamOnePlayerTwo = null,
+    PlayerDto? TeamTwoPlayerOne = null,
+    PlayerDto? TeamTwoPlayerTwo = null,
+    TypeGameDto? TypeGame = null,
+    GamePredictionDto? GamePrediction = null
+);

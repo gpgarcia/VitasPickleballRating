@@ -7,7 +7,8 @@ public partial class TypeGame
 {
     public int TypeGameId { get; set; }
 
-    public string GameType { get; set; } = null!;
+    public string Name { get; set; } = null!;
 
-    public DateTimeOffset ChangedTime { get; set; }
+    public long ChangedTime { get; set; }
+
 }

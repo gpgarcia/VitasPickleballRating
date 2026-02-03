@@ -15,7 +15,7 @@ public partial class GamePrediction
 
     public int T2p2rating { get; set; }
 
-    public double T1predictedWinProb { get; set; }
+    public decimal T1predictedWinProb { get; set; }
 
     public int? ExpectT1score { get; set; }
 

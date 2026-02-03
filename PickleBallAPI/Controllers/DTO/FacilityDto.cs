@@ -2,26 +2,32 @@
 
 namespace PickleBallAPI.Controllers.DTO;
 
-public class FacilityDto
-{
-    public int FacilityId { get; set; }
-
-    public string Name { get; set; } = null!;
-
-    public string AddressLine1 { get; set; } = null!;
-
-    public string? AddressLine2 { get; set; }
-
-    public string City { get; set; } = null!;
-
-    public string StateCode { get; set; } = null!;
-
-    public string? PostalCode { get; set; }
-
-    public int NumberCourts { get; set; }
-
-    public TypeFacilityDto TypeFacility { get; set; } = null!;
-
-    public string? Notes { get; set; }
-
-}
+/// <summary>
+/// Data transfer object that represents a facility.
+/// </summary>
+/// <remarks>
+/// Provides lightweight facility information returned by the API. Implemented as a positional
+/// record (primary constructor) to keep the DTO concise and immutable.
+/// </remarks>
+/// <param name="FacilityId">Unique identifier for the facility.</param>
+/// <param name="Name">Facility display name.</param>
+/// <param name="AddressLine1">Primary street address line.</param>
+/// <param name="AddressLine2">Optional secondary address line.</param>
+/// <param name="City">City where the facility is located.</param>
+/// <param name="StateCode">Postal state code (e.g. "CA").</param>
+/// <param name="PostalCode">Optional postal / ZIP code.</param>
+/// <param name="NumberCourts">Number of courts at the facility.</param>
+/// <param name="TypeFacility">Facility type metadata.</param>
+/// <param name="Notes">Optional free-form notes about the facility.</param>
+public sealed record FacilityDto(
+    int? FacilityId = null,
+    string? Name = null,
+    string? AddressLine1 = null,
+    string? AddressLine2 = null,
+    string? City = null,
+    string? StateCode = null,
+    string? PostalCode = null,
+    int? NumberCourts = null,
+    TypeFacilityDto? TypeFacility = null,
+    string? Notes = null
+);

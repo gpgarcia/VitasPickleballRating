@@ -9,9 +9,11 @@ public partial class Player
 
     public string FirstName { get; set; } = null!;
 
+    public string? NickName { get; set; }
+
     public string LastName { get; set; } = null!;
 
-    public DateTimeOffset ChangedTime { get; set; }
+    public long ChangedTime { get; set; }
 
     public virtual ICollection<PlayerRating> PlayerRatings { get; set; } = new List<PlayerRating>();
 }

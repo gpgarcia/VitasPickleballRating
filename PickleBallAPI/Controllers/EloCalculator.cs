@@ -11,11 +11,11 @@ public static class EloCalculator
     const double baseKFactor = 80.0;
 
 
-    public static double ExpectedTeamOutcome(int player1Rating, int player2Rating, int oppo3Rating, int oppo4Rating)
+    public static decimal ExpectedTeamOutcome(int player1Rating, int player2Rating, int oppo3Rating, int oppo4Rating)
     {
         //from https://towardsdatascience.com/developing-an-elo-based-data-driven-ranking-system-for-2v2-multiplayer-games-7689f7d42a53/
         // resulting ratings not predictive enough :-(
-        double[] eo = [
+        decimal[] eo = [
             ExpectedOutcome(player1Rating, oppo3Rating),
             ExpectedOutcome(player1Rating, oppo4Rating),
             ExpectedOutcome(player2Rating, oppo3Rating),
@@ -25,29 +25,29 @@ public static class EloCalculator
         return eo.Average();
     }
 
-    public static double ExpectedTeamOutcome2(int player1Rating, int player2Rating, int oppo3Rating, int oppo4Rating)
+    public static decimal ExpectedTeamOutcome2(int player1Rating, int player2Rating, int oppo3Rating, int oppo4Rating)
     {
         int[] t1 = [player1Rating, player2Rating];
         int[] t2 = [oppo3Rating, oppo4Rating];
 
-        double ep1 = ExpectedOutcome(t1.Average(), t2.Average());
+        decimal ep1 = ExpectedOutcome(t1.Average(), t2.Average());
 
         return ep1;
     }
 
-    public static double ExpectedOutcome(double rating, double opponentRating)
+    public static decimal ExpectedOutcome(double rating, double opponentRating)
     {
         double term1 = 1 + Math.Pow(10, (opponentRating - rating) / scaleFactor);
-        return (1.0 / term1);
+        return (decimal)(1.0 / term1);
     }
 
 
-    public static (int, int) CalculateNewRating(int player1Rating, int player2Rating, double expectedOutcome, double actualOutcome, double kFactor)
+    public static (int, int) CalculateNewRating(int player1Rating, int player2Rating, decimal expectedOutcome, decimal actualOutcome, double kFactor)
     {
-        var p1w = (double)player1Rating / (double)(player1Rating + player2Rating);
-        var p2w = (double)player2Rating / (double)(player1Rating + player2Rating);
+        var p1w = (decimal)player1Rating / (decimal)(player1Rating + player2Rating);
+        var p2w = (decimal)player2Rating / (decimal)(player1Rating + player2Rating);
 
-        var change = kFactor * (actualOutcome - expectedOutcome);
+        decimal change = (decimal)kFactor * (actualOutcome - expectedOutcome);
         var p1r = Math.Max(Math.Round(player1Rating + change * p1w), MinimumRating);
         var p2r = Math.Max(Math.Round(player2Rating + change * p2w), MinimumRating);
         return ((int)p1r, (int)p2r);

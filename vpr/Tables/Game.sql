@@ -10,7 +10,8 @@
     [TeamTwoPlayerTwoId]  INT     NOT NULL,
     [TeamOneScore]  INT     NULL,
     [TeamTwoScore]  INT     NULL, 
-    [ChangedTime] DATETIMEOFFSET NOT NULL, -- Do not Default. This is the App level concurrency token
+    -- Use unix epoch milliseconds for UTC timestamps
+    [ChangedTime] BIGINT NOT NULL, -- Do not Default. This is the App level concurrency token
     CONSTRAINT [PK_Game_GameId]     PRIMARY KEY CLUSTERED ([GameId]),
     Constraint [FK_Game_FacilityId] Foreign key ([FacilityId]) References [Facility]([FacilityId]),
     CONSTRAINT [FK_Game_TypeGameId] FOREIGN KEY ([TypeGameId]) REFERENCES [TypeGame]([TypeGameId]),
@@ -26,5 +27,7 @@
     CONSTRAINT [CK_Team2_Player_Order]      CHECK ([TeamTwoPlayerOneId] < [TeamTwoPlayerTwoId]),
     CONSTRAINT [CK_Team1_PlayersDifferent]  CHECK ([TeamOnePlayerOneId] <> [TeamOnePlayerTwoId]),
     CONSTRAINT [CK_Team2_PlayersDifferent]  CHECK ([TeamTwoPlayerOneId] <> [TeamTwoPlayerTwoId]),
+    CONSTRAINT [CK_TeamScores_NonNegative]    CHECK ([TeamOneScore] >= 0 AND [TeamTwoScore] >= 0)
+
 
 );

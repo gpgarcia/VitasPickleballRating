@@ -5,7 +5,7 @@ namespace PickleBallAPI.Models;
 
 public partial class PlayerStanding
 {
-    public string FirstName { get; set; } = null!;
+    public string Name { get; set; } = null!;
 
     public int? GamesPlayed { get; set; }
 

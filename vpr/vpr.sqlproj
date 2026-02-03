@@ -1,84 +1,34 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
-<Project Sdk="MSBuild.Sdk.SqlProj/3.3.0">
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build">
+  <Sdk Name="Microsoft.Build.Sql" Version="2.0.0" />
   <PropertyGroup>
-    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
-    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
     <Name>vpr</Name>
-    <SchemaVersion>2.0</SchemaVersion>
-    <ProjectVersion>4.1</ProjectVersion>
-    <ProjectGuid>{6ba4f3de-4dd3-4ca4-8efe-037a25096f49}</ProjectGuid>
-    <DSP>Microsoft.Data.Tools.Schema.Sql.Sql130DatabaseSchemaProvider</DSP>
-    <OutputType>Database</OutputType>
-    <RootPath>
-    </RootPath>
-    <RootNamespace>vpr</RootNamespace>
-    <AssemblyName>vpr</AssemblyName>
+    <!-- SQL Server 2019	-->
+    <!--<SqlServerVersion>Sql150</SqlServerVersion>
+		<DSP>Microsoft.Data.Tools.Schema.Sql.Sql150DatabaseSchemaProvider</DSP>-->
+    <!-- SQL Server 2022	-->
+    <SqlServerVersion>Sql160</SqlServerVersion>
+    <DSP>Microsoft.Data.Tools.Schema.Sql.Sql160DatabaseSchemaProvider</DSP>
+    <!-- Azure SQL Server-->
+    <!--<SqlServerVersion>Sql170</SqlServerVersion>
+		<DSP>Microsoft.Data.Tools.Schema.Sql.Sql170DatabaseSchemaProvider</DSP>-->
     <ModelCollation>1033, CI</ModelCollation>
-    <DefaultFileStructure>BySchemaAndSchemaType</DefaultFileStructure>
-    <DeployToDatabase>True</DeployToDatabase>
-    <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
-	<TargetFramework>net4.7.2</TargetFramework>
-    <TargetLanguage>CS</TargetLanguage>
-    <AppDesignerFolder>Properties</AppDesignerFolder>
-    <SqlServerVerification>False</SqlServerVerification>
-    <IncludeCompositeObjects>True</IncludeCompositeObjects>
     <TargetDatabaseSet>True</TargetDatabaseSet>
-    <TargetFrameworkProfile />
+    <ProjectGuid>{2d22d599-6475-4ade-9bfe-25754645f4f3}</ProjectGuid>
   </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
-    <OutputPath>bin\Release\</OutputPath>
-    <BuildScriptName>$(MSBuildProjectName).sql</BuildScriptName>
-    <TreatWarningsAsErrors>False</TreatWarningsAsErrors>
-    <DebugType>pdbonly</DebugType>
-    <Optimize>true</Optimize>
-    <DefineDebug>false</DefineDebug>
-    <DefineTrace>true</DefineTrace>
-    <ErrorReport>prompt</ErrorReport>
-    <WarningLevel>4</WarningLevel>
-  </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
-    <OutputPath>bin\Debug\</OutputPath>
-    <BuildScriptName>$(MSBuildProjectName).sql</BuildScriptName>
-    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
-    <DebugSymbols>true</DebugSymbols>
-    <DebugType>full</DebugType>
-    <Optimize>false</Optimize>
-    <DefineDebug>true</DefineDebug>
-    <DefineTrace>true</DefineTrace>
-    <ErrorReport>prompt</ErrorReport>
-    <WarningLevel>4</WarningLevel>
-  </PropertyGroup>
-  <PropertyGroup>
-    <VisualStudioVersion Condition="'$(VisualStudioVersion)' == ''">11.0</VisualStudioVersion>
-    <!-- Default to the v11.0 targets path if the targets file for the current VS version is not found -->
-    <SSDTExists Condition="Exists('$(MSBuildExtensionsPath)\Microsoft\VisualStudio\v$(VisualStudioVersion)\SSDT\Microsoft.Data.Tools.Schema.SqlTasks.targets')">True</SSDTExists>
-    <VisualStudioVersion Condition="'$(SSDTExists)' == ''">11.0</VisualStudioVersion>
-  </PropertyGroup>
-  <!-- <Import Condition="'$(SQLDBExtensionsRefPath)' != ''" Project="$(SQLDBExtensionsRefPath)\Microsoft.Data.Tools.Schema.SqlTasks.targets" /> -->
-  <!-- <Import Condition="'$(SQLDBExtensionsRefPath)' == ''" Project="$(MSBuildExtensionsPath)\Microsoft\VisualStudio\v$(VisualStudioVersion)\SSDT\Microsoft.Data.Tools.Schema.SqlTasks.targets" /> -->
   <ItemGroup>
-    <Folder Include="Properties" />
-    <Folder Include="Tables" />
-    <Folder Include="UtilityScripts" />
-    <Folder Include="Views" />
-  </ItemGroup>
-  <ItemGroup>
-    <Build Include="Tables\Game.sql" />
-    <Build Include="Tables\Player.sql" />
-    <PostDeploy Include="UtilityScripts\Script.PostDeployment1.sql" />
-    <Build Include="Tables\TypeGame.sql" />
-    <Build Include="Views\GameDetails.sql" />
-    <Build Include="Tables\PlayerRating.sql" />
-    <Build Include="Tables\GamePrediction.sql" />
-    <Build Include="Views\PlayerStanding.sql" />
-    <Build Include="Tables\Facility.sql" />
-    <Build Include="Tables\TypeFacility.sql" />
-  </ItemGroup>
-  <ItemGroup>
-    <RefactorLog Include="vpr.refactorlog" />
+    <Folder Include="UtilityScripts\" />
+    <Folder Include="Tables\" />
+    <Folder Include="Views\" />
   </ItemGroup>
   <ItemGroup>
     <None Include="vpr.publish.xml" />
+    <Content Include="Tables\*.sql" />
+    <Content Include="Views\*.sql" />
+  </ItemGroup>
+  <ItemGroup>
     <None Include="UtilityScripts\StdQueries.sql" />
+    <PostDeploy Include="UtilityScripts\Script.PostDeployment1.sql" />
+    <RefactorLog Include="vpr.refactorlog" />
   </ItemGroup>
 </Project>

@@ -1,7 +1,7 @@
 ﻿CREATE VIEW [dbo].[GameDetails]
 AS 
 SELECT  g.GameId, g.PlayedDate 
-        , tg.GameType
+        , game_type_name = tg.Name   
         , team1_player1_PlayerId = t1p1.PlayerId
         , team1_player1_FirstName = t1p1.FirstName
         , team1_player1_LastName = t1p1.LastName

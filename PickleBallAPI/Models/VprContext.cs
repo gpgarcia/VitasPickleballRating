@@ -1,4 +1,6 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using System;
+using System.Collections.Generic;
+using Microsoft.EntityFrameworkCore;
 
 namespace PickleBallAPI.Models;
 
@@ -51,11 +53,11 @@ public partial class VprContext : DbContext
                 .HasMaxLength(2)
                 .IsUnicode(false)
                 .IsFixedLength();
+
             entity.HasOne(d => d.TypeFacility).WithMany()
                 .HasForeignKey(d => d.TypeFacilityId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_Facility_TypeFacilityId");
-
+                .HasConstraintName("FK_Facility_TypeFacilityID");
         });
 
         modelBuilder.Entity<Game>(entity =>
@@ -105,7 +107,9 @@ public partial class VprContext : DbContext
             entity.Property(e => e.ExpectT2score).HasColumnName("ExpectT2Score");
             entity.Property(e => e.T1p1rating).HasColumnName("T1P1Rating");
             entity.Property(e => e.T1p2rating).HasColumnName("T1P2Rating");
-            entity.Property(e => e.T1predictedWinProb).HasColumnName("T1PredictedWinProb");
+            entity.Property(e => e.T1predictedWinProb)
+                .HasColumnType("decimal(18, 0)")
+                .HasColumnName("T1PredictedWinProb");
             entity.Property(e => e.T2p1rating).HasColumnName("T2P1Rating");
             entity.Property(e => e.T2p2rating).HasColumnName("T2P2Rating");
 
@@ -124,6 +128,7 @@ public partial class VprContext : DbContext
 
             entity.Property(e => e.FirstName).HasMaxLength(50);
             entity.Property(e => e.LastName).HasMaxLength(50);
+            entity.Property(e => e.NickName).HasMaxLength(50);
         });
 
         modelBuilder.Entity<PlayerRating>(entity =>
@@ -150,7 +155,7 @@ public partial class VprContext : DbContext
                 .HasNoKey()
                 .ToView("PlayerStanding");
 
-            entity.Property(e => e.FirstName).HasMaxLength(50);
+            entity.Property(e => e.Name).HasMaxLength(50);
             entity.Property(e => e.WinPct).HasColumnType("numeric(24, 12)");
         });
 
@@ -160,10 +165,10 @@ public partial class VprContext : DbContext
 
             entity.ToTable("TypeFacility");
 
-            entity.HasIndex(e => e.FacilityType, "UQ_TypeFacility_FacilityType").IsUnique();
+            entity.HasIndex(e => e.Name, "UQ_TypeFacility_FacilityType").IsUnique();
 
             entity.Property(e => e.TypeFacilityId).ValueGeneratedNever();
-            entity.Property(e => e.FacilityType)
+            entity.Property(e => e.Name)
                 .HasMaxLength(50)
                 .IsUnicode(false);
         });
@@ -174,10 +179,10 @@ public partial class VprContext : DbContext
 
             entity.ToTable("TypeGame");
 
-            entity.HasIndex(e => e.GameType, "UQ_TypeGame_GameType").IsUnique();
+            entity.HasIndex(e => e.Name, "UQ_TypeGame_GameType").IsUnique();
 
             entity.Property(e => e.TypeGameId).ValueGeneratedNever();
-            entity.Property(e => e.GameType).HasMaxLength(20);
+            entity.Property(e => e.Name).HasMaxLength(20);
         });
 
         OnModelCreatingPartial(modelBuilder);

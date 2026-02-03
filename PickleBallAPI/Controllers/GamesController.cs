@@ -1,4 +1,6 @@
 ﻿using AutoMapper;
+using CsvHelper;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -6,17 +8,36 @@ using PickleBallAPI.Controllers.DTO;
 using PickleBallAPI.Models;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
+using System.IO;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 
 namespace PickleBallAPI.Controllers
 {
+    /// <summary>
+    /// Controller that exposes HTTP endpoints to manage games, predictions and player ratings.
+    /// </summary>
+    /// <remarks>
+    /// Uses constructor-injected services:
+    /// - <c>VprContext</c> for data access,
+    /// - <c>IMapper</c> for DTO/domain mapping,
+    /// - <c>ILogger{GamesController}</c> for structured logging.
+    /// </remarks>
     [Route("api/[controller]")]
     [ApiController]
     public class GamesController(VprContext context, IMapper mapper, ILogger<GamesController> logger) : ControllerBase
     {
+
         // GET: api/Games
+        /// <summary>
+        /// Retrieves a list of all available games.
+        /// </summary>
+        /// <returns>An <see cref="ActionResult{T}"/> containing an array of <see cref="GameDto"/> objects representing all
+        /// games. Returns an empty array if no games are found.</returns>
         [HttpGet]
+        [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(GameDto[]))]
         public async Task<ActionResult<IEnumerable<GameDto>>> GetGames()
         {
             var games = await context.GetAllGamesAsync();
@@ -24,8 +45,66 @@ namespace PickleBallAPI.Controllers
             return Ok(gameDtos);
         }
 
+        // GET: api/Games/export/raw
+        /// <summary>
+        /// Exports raw game data as a CSV file and returns it as a downloadable attachment.
+        /// </summary>
+        /// <remarks>
+        /// Produces a UTF-8 encoded CSV using CsvHelper. Each row represents a single <see cref="Game"/> and
+        /// contains basic, raw fields: game id, facility id, played date (ISO 8601), game type id,
+        /// player ids, team scores and changed time. Navigation properties are not included.
+        /// The CSV is returned with content type 'text/csv; charset=utf-8' and a filename in the form
+        /// 'games_raw_yyyyMMddHHmmss.csv'.
+        /// </remarks>
+        /// <returns>
+        /// 200 OK with a CSV file attachment when successful.
+        /// 500 Internal Server Error with a short diagnostic message when an error occurs.
+        /// </returns>
+        [HttpGet("export/raw")]
+        [Produces("text/csv")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        public async Task<IActionResult> ExportRawGamesCsv()
+        {
+            logger.LogTrace("Received request to export raw games CSV.");
+            var games = await context.GetAllGamesRawAsync();
+            var records = mapper.Map<List<GameRawDto>>(games);
+            var bytes = await GenerateCsvFileAsync(records);
+            // filename of exported file with timestamp
+            var fileName = $"games_raw_{DateTime.UtcNow:yyyyMMddHHmmss}.csv";
+            return File(bytes!, "text/csv; charset=utf-8", fileName);
+        }
+
+        private async Task<byte[]> GenerateCsvFileAsync(IEnumerable<GameRawDto> records)
+        {
+            await using var memoryStream = new MemoryStream();
+            await using var streamWriter = new StreamWriter(memoryStream, Encoding.UTF8, leaveOpen: true);
+            using var csv = new CsvWriter(streamWriter, CultureInfo.InvariantCulture);
+
+            csv.WriteRecords(records);
+            await streamWriter.FlushAsync();
+            var bytes = memoryStream.ToArray();
+            if (bytes.Length == 0)
+            {
+                logger.LogWarning("Export produced an empty CSV.");
+            }
+            return bytes;
+        }
+
+
         // GET: api/Games/5
+        /// <summary>
+        /// GET: api/Games/5
+        /// Retrieves a single game by identifier.
+        /// </summary>
+        /// <param name="id">The identifier of the game to fetch.</param>
+        /// <returns>
+        /// - 200 OK and a <see cref="GameDto"/> when the game exists.
+        /// - 404 NotFound when no game with the provided id exists.
+        /// </returns>
         [HttpGet("{id}")]
+        [ProducesResponseType(typeof(GameDto), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<ActionResult<GameDto>> GetGame(int id)
         {
             var game = await context.GetGameAsync(id);
@@ -38,12 +117,41 @@ namespace PickleBallAPI.Controllers
 
         // PUT: api/Games/5
         // To protect from over posting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
+        /// <summary>
+        /// Updates an existing game.
+        /// </summary>
+        /// <remarks>
+        /// Validates the incoming <see cref="GameDto"/> and its players, maps the DTO to the
+        /// domain <see cref="Game"/> model, recalculates the game's prediction and any affected
+        /// player ratings, and persists the changes to the database.
+        ///
+        /// Behavior:
+        /// - Returns 400 BadRequest when the route id does not match <c>gameDto.GameId</c>
+        ///   or when validation of the game or its players fails.
+        /// - Returns 404 NotFound when a concurrency conflict occurs and the game no longer exists.
+        /// - Returns 204 NoContent on successful update.
+        ///
+        /// Note: optimistic concurrency is not yet implemented (TODO). The method catches
+        /// <see cref="DbUpdateConcurrencyException"/> to detect deleted resources but rethrows
+        /// other concurrency failures.
+        /// </remarks>
+        /// <param name="id">The identifier of the game to update. Must match <c>gameDto.GameId</c>.</param>
+        /// <param name="gameDto">The updated game data transfer object.</param>
+        /// <returns>
+        /// An <see cref="IActionResult"/> with one of:
+        /// - <see cref="StatusCodes.Status204NoContent"/> when the update succeeds.
+        /// - <see cref="StatusCodes.Status400BadRequest"/> when validation fails or ids mismatch.
+        /// - <see cref="StatusCodes.Status404NotFound"/> when the game does not exist.
+        /// </returns>
         [HttpPut("{id}")]
+        [ProducesResponseType(StatusCodes.Status400BadRequest, Type= typeof(string)) ]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
         public async Task<IActionResult> PutGame(int id, GameDto gameDto)
         {
             //TODO: implement optimistic concurrency
             logger.LogTrace("Received request to update a game.");
-            Game game = null!;
+            Game game;
             if (id != gameDto.GameId)
             {
                 return BadRequest("Id does not match game data");
@@ -81,9 +189,21 @@ namespace PickleBallAPI.Controllers
             }
             return NoContent();
         }
+
+
         // PUT: api/Games/5/update
         // To protect from over posting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
+        /// <summary>
+        /// Recalculates prediction and ratings for a single existing game, based on its current persisted state.
+        /// </summary>
+        /// <param name="id">Identifier of the existing game to update.</param>
+        /// <returns>
+        /// - 204 NoContent on success.
+        /// - 404 NotFound when the game does not exist or a concurrency conflict indicates deletion.
+        /// </returns>
         [HttpPut("{id}/update")]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
         public async Task<IActionResult> PutGameUpdate(int id)
         {
             logger.LogTrace("Received request to update a game base on existing data.");
@@ -115,7 +235,24 @@ namespace PickleBallAPI.Controllers
 
         // PUT: api/Games/update
         // To protect from over posting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
+        /// <summary>
+        /// Rebuilds all game predictions and player ratings for the entire dataset.
+        /// </summary>
+        /// <remarks>
+        /// Steps performed:
+        /// - Removes existing player ratings (via TRUNCATE for SQL Server or ExecuteDelete otherwise).
+        /// - Clears stored game predictions for all games.
+        /// - Iterates every game and recalculates its prediction and related player ratings.
+        ///
+        /// Use with caution: this operation affects all persisted rating data and can be long-running.
+        /// </remarks>
+        /// <returns>
+        /// - 204 NoContent on success.
+        /// - 404 NotFound if a concurrency conflict indicates a game was deleted during processing.
+        /// </returns>
         [HttpPut("update")]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
         public async Task<IActionResult> PutGameUpdate()
         {
             logger.LogTrace("Remove old Player Ratings and Game Prediction");
@@ -164,7 +301,24 @@ namespace PickleBallAPI.Controllers
 
         // POST: api/Games
         // To protect from over posting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
+        /// <summary>
+        /// Creates a new game.
+        /// </summary>
+        /// <remarks>
+        /// Validates the provided <see cref="GameDto"/> and its players, maps it to the domain <see cref="Game"/>,
+        /// computes the initial prediction and any player rating changes, persists the game and returns a 201 Created response.
+        /// On success the Location header points to the newly created resource via the <c>GetGame</c> action.
+        /// </remarks>
+        /// <param name="gameDto">The game DTO to persist.</param>
+        /// <returns>
+        /// - 201 Created with the provided DTO when successful.
+        /// - 400 BadRequest when validation fails.
+        /// - 500 InternalServerError when an exception occurs while saving.
+        /// </returns>
         [HttpPost]
+        [ProducesResponseType(StatusCodes.Status201Created)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError, Type= typeof(Exception))]
         public async Task<ActionResult<GameDto>> PostGame(GameDto gameDto)
         {
             logger.LogTrace("Received request to update a game.");
@@ -197,7 +351,15 @@ namespace PickleBallAPI.Controllers
         }
 
 
-
+        /// <summary>
+        /// Calculates the prediction and gathers current player ratings for the supplied game.
+        /// </summary>
+        /// <param name="game">The game entity to calculate prediction for.</param>
+        /// <returns>
+        /// A tuple containing:
+        /// - <c>GameLogic.GameRatings ratings</c>: current player ratings used for prediction.
+        /// - <c>GamePrediction gamePrediction</c>: the computed prediction for the game.
+        /// </returns>
         private async Task<(GameLogic.GameRatings ratings, GamePrediction gamePrediction)> CalculatePrediction(Game game)
         {
             var playedAt = game.PlayedDate ?? DateTimeOffset.Now;
@@ -208,6 +370,16 @@ namespace PickleBallAPI.Controllers
             return (ratings, gamePrediction);
         }
 
+        /// <summary>
+        /// Recalculates and updates game-level dependencies:
+        /// - computes and sets the game's <see cref="GamePrediction"/>,
+        /// - when the game has a <c>PlayedDate</c>, calculates and persists new <c>PlayerRating</c> records.
+        /// </summary>
+        /// <param name="game">The game to update dependencies for. The entity may be tracked by the context.</param>
+        /// <remarks>
+        /// This method will add new <see cref="PlayerRating"/> entities when required and update the in-memory
+        /// <see cref="Game"/> instance's <c>GamePrediction</c> property. Persisting to the database is the caller's responsibility.
+        /// </remarks>
         private async Task UpdateGameDependencies(Game game)
         {
             GameLogic.GameRatings ratings;

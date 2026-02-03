@@ -10,7 +10,8 @@
     ,[NumberCourts] INT NOT NULL
     ,[TypeFacilityId] INT NOT NULL
     ,[Notes] VARCHAR(MAX) NULL
-    ,[ChangedTime] DATETIMEOFFSET NOT NULL
+    -- Use unix epoch milliseconds for UTC timestamps
+    ,[ChangedTime] BIGINT NOT NULL -- Do not Default. This is the App level concurrency token
     ,CONSTRAINT PK_Facility_FacilityId PRIMARY KEY (FacilityId)
     ,Constraint FK_Facility_TypeFacilityID FOREIGN KEY (TypeFacilityId) REFERENCES TypeFacility(TypeFacilityId)
 

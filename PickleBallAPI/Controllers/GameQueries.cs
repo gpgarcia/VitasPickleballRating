@@ -13,6 +13,14 @@ public static class GameQueries
         return context.Games.Any(e => e.GameId == id);
     }
 
+    public static async Task<IEnumerable<Game>> GetAllGamesRawAsync(this VprContext context)
+    {
+        var tmp = await context
+            .Games
+            .ToListAsync()
+            ;
+        return tmp;
+    }
     public static async Task<IEnumerable<Game>> GetAllGamesAsync(this VprContext context)
     {
         var tmp = await context

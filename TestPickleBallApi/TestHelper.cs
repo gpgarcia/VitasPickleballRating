@@ -15,10 +15,31 @@ namespace TestPickleBallApi
 
             List<TypeGame> typeGames =
             [
-                new TypeGame{ TypeGameId = 1, GameType="Recreational" },
-                new TypeGame{ TypeGameId = 2, GameType="Tournament" },
+                new TypeGame{ TypeGameId = 1, Name="Recreational" },
+                new TypeGame{ TypeGameId = 2, Name="Tournament" },
             ];
             seedContext.TypeGames.AddRange(typeGames);
+
+            List<TypeFacility> typeFacilities =
+            [
+                new TypeFacility{ TypeFacilityId = 1, Name="Public" },
+                new TypeFacility{ TypeFacilityId = 2, Name="Private" },
+            ];
+            seedContext.TypeFacilities.AddRange(typeFacilities);
+
+            seedContext.Facilities.Add(new Facility
+            {
+                FacilityId = 1,
+                Name = "Test Facility 1",
+                TypeFacilityId = 1,
+                NumberCourts = 4,
+                AddressLine1 = "123 Main St",
+                AddressLine2 = null,
+                City = "Anytown",
+                StateCode = "FL",
+                PostalCode = "33130",
+                ChangedTime = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
+            });
         }
 
         public static void SetupPlayerData(VprContext seedContext)

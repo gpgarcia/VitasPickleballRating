@@ -37,10 +37,13 @@ namespace PickleBallAPI.Controllers
             {
                 msg += "Team Two cannot have the same player twice.\n";
             }
-            if (gameDto.TeamOnePlayerOne.PlayerId == gameDto.TeamTwoPlayerOne.PlayerId ||
-                gameDto.TeamOnePlayerOne.PlayerId == gameDto.TeamTwoPlayerTwo.PlayerId)
+            if (gameDto.TeamOnePlayerOne.PlayerId == gameDto.TeamTwoPlayerOne.PlayerId)
             {
-                msg += "Player can not be on both teams.\n";
+                msg += "Team 1 first Player can not be on both teams.\n";
+            }
+            if ( gameDto.TeamOnePlayerOne.PlayerId == gameDto.TeamTwoPlayerTwo.PlayerId)
+            {
+                msg += "Team 1 first Player can not be on both teams.\n";
             }
             if (gameDto.TeamOnePlayerTwo != null &&
                 (gameDto.TeamOnePlayerTwo.PlayerId == gameDto.TeamTwoPlayerOne.PlayerId ||
@@ -98,10 +101,14 @@ namespace PickleBallAPI.Controllers
             msg += ValidatePlayer(gameDto.TeamTwoPlayerTwo.PlayerId);
             return msg;
 
-            string ValidatePlayer(int playerId)
+            string ValidatePlayer(int? playerId)
             {
                 string msg = string.Empty;
-                if (!ctx.PlayerExists(playerId))
+                if (playerId == null)
+                {
+                    msg = $"Player Id, canot be null.\n";
+                }   
+                else if (!ctx.PlayerExists(playerId.Value))
                 {
                     msg = $"Player Id, {playerId}, does not exist.\n";
                 }
@@ -130,15 +137,17 @@ namespace PickleBallAPI.Controllers
         /// Given the expected outcome, calculate the winning and losing score. 
         /// Based on games to 11 win by 2 or first to 15
         /// </summary>
-        /// <param name="expectedOutcome"> Probability of victory</param>
-        /// <returns> a game score tuple</returns>
-        /// <exception cref="ArgumentOutOfRangeException"> when  0.0 <=expected outcome <= 1.0</exception>
-        public static (int team1Score, int team2Score) CalculateExpectedScore(double expectedOutcome)
+        /// <param name="expectedOutcome">Probability of victory</param>
+        /// <returns>A game score tuple</returns>
+        /// <exception cref="ArgumentOutOfRangeException">
+        /// Thrown when <paramref name="expectedOutcome"/> is less than 0.0 or greater than 1.0.
+        /// </exception>
+        public static (int team1Score, int team2Score) CalculateExpectedScore(decimal expectedOutcome)
         {
             var team1Wins = true;
-            if (expectedOutcome < 0.0 || expectedOutcome > 1.0)
+            if (expectedOutcome < 0.0m || expectedOutcome > 1.0m)
                 throw new ArgumentOutOfRangeException(nameof(expectedOutcome), "Expected outcome must be between 0 and 1.");
-            if (expectedOutcome < 0.5)
+            if (expectedOutcome < 0.5m)
             {
                 // team one looses
                 team1Wins = false;
@@ -150,9 +159,9 @@ namespace PickleBallAPI.Controllers
             foreach (int w in winningScoreList)
             {
                 winScore = w;
-                var l = winScore * (1.0 / expectedOutcome - 1.0);
+                var l = winScore * (1.0m / expectedOutcome - 1.0m);
                 lossScore = (int)Math.Round(l);
-                if (Math.Abs(l - lossScore) < 0.5 && winScore - lossScore >= 2)
+                if (Math.Abs(l - lossScore) < 0.5m && winScore - lossScore >= 2)
                 {
                     break;
                 }
@@ -200,7 +209,7 @@ namespace PickleBallAPI.Controllers
         }
         public static GamePrediction GetGamePrediction(int gameId, DateTimeOffset playedAt, GameRatings ratings)
         {
-            double expectedOutcome = EloCalculator.ExpectedTeamOutcome2(ratings.T1P1, ratings.T1P2, ratings.T2P1, ratings.T2P2);
+            decimal expectedOutcome = EloCalculator.ExpectedTeamOutcome2(ratings.T1P1, ratings.T1P2, ratings.T2P1, ratings.T2P2);
             (int t1Score, int t2Score) = CalculateExpectedScore(expectedOutcome);
             var gamePrediction = new GamePrediction
             {
@@ -223,13 +232,14 @@ namespace PickleBallAPI.Controllers
             List<PlayerRating> tmp = [];
             if (game.PlayedDate != null)
             {
-                var changedToken = DateTime.Now;
+                var changedToken = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+                //var changedToken = DateTimeOffset.UtcNow;
                 // Update player ratings based on game result
                 var kFactor = EloCalculator.CalculateKFactor(ratings.T1P1);
                 //if there is a date scores are not null
                 double T1ActualOutcome = (double)game.TeamOneScore! / (double)(game.TeamTwoScore + game.TeamOneScore)!;
-                (int newP1Rating, int newP2rating) = EloCalculator.CalculateNewRating(ratings.T1P1, ratings.T1P2, gamePrediction.T1predictedWinProb, T1ActualOutcome, kFactor);
-                (int newP3Rating, int newP4rating) = EloCalculator.CalculateNewRating(ratings.T2P1, ratings.T2P2, 1.0 - gamePrediction.T1predictedWinProb, 1.0 - T1ActualOutcome, kFactor);
+                (int newP1Rating, int newP2rating) = EloCalculator.CalculateNewRating(ratings.T1P1, ratings.T1P2, gamePrediction.T1predictedWinProb, (decimal)T1ActualOutcome, kFactor);
+                (int newP3Rating, int newP4rating) = EloCalculator.CalculateNewRating(ratings.T2P1, ratings.T2P2, 1.0m - gamePrediction.T1predictedWinProb, (decimal)(1.0 - T1ActualOutcome), kFactor);
                 tmp =
                 [
                     new()

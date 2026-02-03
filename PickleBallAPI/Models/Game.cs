@@ -25,7 +25,7 @@ public partial class Game
 
     public int? TeamTwoScore { get; set; }
 
-    public DateTimeOffset ChangedTime { get; set; }
+    public long ChangedTime { get; set; }
 
     public virtual Facility? Facility { get; set; }
 

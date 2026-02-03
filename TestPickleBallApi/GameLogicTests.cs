@@ -42,16 +42,16 @@ namespace TestPickleBallApi
             using var setupCtx = new VprContext(vprOpt);
             var players = new List<Player>
             {
-                new () { PlayerId = 1, FirstName = "Player", LastName = "One", ChangedTime = DateTimeOffset.Now },
-                new () { PlayerId = 2, FirstName = "Player", LastName = "Two", ChangedTime = DateTimeOffset.Now },
-                new () { PlayerId = 3, FirstName = "Player", LastName = "Three", ChangedTime = DateTimeOffset.Now },
-                new () { PlayerId = 4, FirstName = "Player", LastName = "Four", ChangedTime = DateTimeOffset.Now },
+                new () { PlayerId = 1, FirstName = "Player", LastName = "One", ChangedTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()},
+                new () { PlayerId = 2, FirstName = "Player", LastName = "Two", ChangedTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() },
+                new () { PlayerId = 3, FirstName = "Player", LastName = "Three", ChangedTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() },
+                new () { PlayerId = 4, FirstName = "Player", LastName = "Four", ChangedTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() },
             };
             setupCtx.Players.AddRange(players);
             var typeGames = new List<TypeGame>
             {
-                new () { TypeGameId = 1, GameType = "Recreational" },
-                new () { TypeGameId = 2, GameType = "Tournament" },
+                new () { TypeGameId = 1, Name = "Recreational" },
+                new () { TypeGameId = 2, Name = "Tournament" },
             };
             setupCtx.TypeGames.AddRange(typeGames);
             var games = new List<Game>
@@ -60,27 +60,27 @@ namespace TestPickleBallApi
                 , TeamOnePlayerOneId = 1, TeamOnePlayerTwoId = 2, TeamTwoPlayerOneId = 3, TeamTwoPlayerTwoId = 4
                 , TeamOnePlayerOne=null!, TeamOnePlayerTwo=null!, TeamTwoPlayerOne=null!, TeamTwoPlayerTwo=null!
                 ,TeamOneScore = 11, TeamTwoScore = 8
-                , ChangedTime = DateTimeOffset.Now
+                , ChangedTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
                 },
                 new () { GameId = 2, PlayedDate = DateTimeOffset.Now.AddDays(-6), TypeGameId=1
                 , TeamOnePlayerOneId = 1, TeamOnePlayerTwoId = 3, TeamTwoPlayerOneId = 2, TeamTwoPlayerTwoId = 4
                 , TeamOnePlayerOne=null!, TeamOnePlayerTwo=null!, TeamTwoPlayerOne=null!, TeamTwoPlayerTwo=null!
                 , TeamOneScore = 9, TeamTwoScore = 11
-                , ChangedTime = DateTimeOffset.Now
+                , ChangedTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
                 }, 
                 new () { GameId = 3, PlayedDate = DateTimeOffset.Now.AddDays(-4), TypeGameId=1
                 , TeamOnePlayerOneId = 1, TeamOnePlayerTwoId = 4, TeamTwoPlayerOneId = 2, TeamTwoPlayerTwoId = 3
                 , TeamOnePlayerOne=null!, TeamOnePlayerTwo=null!, TeamTwoPlayerOne=null!, TeamTwoPlayerTwo=null!
                 , TeamOneScore = 11, TeamTwoScore = 5
-                , ChangedTime = DateTimeOffset.Now
+                , ChangedTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
                 },
             };
             setupCtx.Games.AddRange(games);
             var playerRatings = new List<PlayerRating>
             {
-                new () { PlayerId = 2, GameId =1, Rating = 300, RatingDate = DateTimeOffset.Now.AddDays(-8), ChangedTime = DateTimeOffset.Now },
-                new () { PlayerId = 3, GameId =2, Rating = 400, RatingDate = DateTimeOffset.Now.AddDays(-6), ChangedTime = DateTimeOffset.Now },
-                new () { PlayerId = 4, GameId =3, Rating = 500, RatingDate = DateTimeOffset.Now.AddDays(-4), ChangedTime = DateTimeOffset.Now },
+                new () { PlayerId = 2, GameId =1, Rating = 300, RatingDate = DateTimeOffset.Now.AddDays(-8), ChangedTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() },
+                new () { PlayerId = 3, GameId =2, Rating = 400, RatingDate = DateTimeOffset.Now.AddDays(-6), ChangedTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() },
+                new () { PlayerId = 4, GameId =3, Rating = 500, RatingDate = DateTimeOffset.Now.AddDays(-4), ChangedTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() },
             };
             setupCtx.PlayerRatings.AddRange(playerRatings);
             setupCtx.SaveChanges();
@@ -96,7 +96,7 @@ namespace TestPickleBallApi
         }
 
 
-        [DataTestMethod]
+        [TestMethod]
         [DataRow(0.7563, 11, 4)]
         [DataRow(0.550, 11, 9)]
         [DataRow(0.545, 11, 9)]
@@ -106,19 +106,19 @@ namespace TestPickleBallApi
         [DataRow(0.500, 15, 14)]
         public void CalculateExpectedScoreTest_ValidInputs_ReturnsExpectedScores(double expectedOutcome, int expectedWin, int expectedLoss)
         {
-            var (winScore, lossScore) = GameLogic.CalculateExpectedScore(expectedOutcome);
+            var (winScore, lossScore) = GameLogic.CalculateExpectedScore((decimal)expectedOutcome);
 
             Assert.AreEqual(expectedWin, winScore);
             Assert.AreEqual(expectedLoss, lossScore);
         }
 
-        [DataTestMethod]
+        [TestMethod]
         [DataRow(-0.1)]
         [DataRow(1.1)]
         public void CalculateExpectedScoreTest_InvalidInputs_ThrowsArgumentOutOfRange(double expectedOutcome)
         {
-            Assert.ThrowsException<ArgumentOutOfRangeException>(() =>
-                GameLogic.CalculateExpectedScore(expectedOutcome));
+            Assert.ThrowsExactly <ArgumentOutOfRangeException>(() =>
+                GameLogic.CalculateExpectedScore((decimal)expectedOutcome));
         }
 
         [TestMethod]
@@ -127,10 +127,10 @@ namespace TestPickleBallApi
         {
             var game = new GameDto
             {
-                TeamOnePlayerOne = new() { PlayerId = 1 },
-                TeamOnePlayerTwo = new() { PlayerId = 2 },
-                TeamTwoPlayerOne = new() { PlayerId = 3 },
-                TeamTwoPlayerTwo = new() { PlayerId = 4 },
+                TeamOnePlayerOne = new PlayerDto(PlayerId:1),
+                TeamOnePlayerTwo = new PlayerDto(PlayerId:2),
+                TeamTwoPlayerOne = new PlayerDto(3),
+                TeamTwoPlayerTwo = new PlayerDto(4),
             };
             var actual = GameLogic.ValidateGamePlayers(_ctx, game);
 
@@ -144,14 +144,15 @@ namespace TestPickleBallApi
         {
             var game = new GameDto
             {
-                TeamOnePlayerOne = new() { PlayerId = 1 },
-                TeamOnePlayerTwo = new() { PlayerId = 2 },
-                TeamTwoPlayerOne = new() { PlayerId = 3 },
-                TeamTwoPlayerTwo = new() { PlayerId = 7 },  // <== OJO invalid player id
+                TeamOnePlayerOne = new PlayerDto(PlayerId: 1),
+                TeamOnePlayerTwo = new PlayerDto(PlayerId: 2),
+                TeamTwoPlayerOne = new PlayerDto(PlayerId: 3),
+                TeamTwoPlayerTwo = new PlayerDto(PlayerId: 7),// <== OJO invalid player id
+
             };
             var actual = GameLogic.ValidateGamePlayers(_ctx, game);
 
-            StringAssert.StartsWith(actual, "Player Id, 7");
+            Assert.StartsWith("Player Id, 7", actual);
 
         }
 
@@ -190,7 +191,7 @@ namespace TestPickleBallApi
             var actual = GameLogic.ValidateGame(game);
 
             //assert
-            StringAssert.StartsWith(actual, "Game data is null");
+            Assert.StartsWith("Game data is null", actual);
 
         }
         [TestMethod]
@@ -199,18 +200,18 @@ namespace TestPickleBallApi
         {
             //arrange
             var game = new GameDto
-            {
-                TeamOnePlayerOne = null!,      // <== OJO null player id
-                TeamOnePlayerTwo = new() { PlayerId = 2 },
-                TeamTwoPlayerOne = new() { PlayerId = 3 },
-                TeamTwoPlayerTwo = new() { PlayerId = 4 },  
-            };
+            (
+                TeamOnePlayerOne: null!,      // <== OJO null player id
+                TeamOnePlayerTwo: new PlayerDto(PlayerId: 2),
+                TeamTwoPlayerOne: new PlayerDto(3),
+                TeamTwoPlayerTwo: new PlayerDto(4)
+            );
 
             //act
             var actual = GameLogic.ValidateGame(game);
 
             //assert
-            StringAssert.StartsWith(actual, "Team One Player One can not be NULL");
+            Assert.StartsWith("Team One Player One can not be NULL", actual);
         }
 
         [TestMethod]
@@ -220,17 +221,17 @@ namespace TestPickleBallApi
             //arrange
             var game = new GameDto
             {
-                TeamOnePlayerOne = new() { PlayerId = 1 },
-                TeamOnePlayerTwo = new() { PlayerId = 2 },
+                TeamOnePlayerOne = new PlayerDto(PlayerId: 1),
+                TeamOnePlayerTwo = new PlayerDto(PlayerId: 2),
                 TeamTwoPlayerOne = null!,                      // <== OJO null player id
-                TeamTwoPlayerTwo = new() { PlayerId = 4 },
+                TeamTwoPlayerTwo = new PlayerDto(PlayerId: 4),
             };
 
             //act
             var actual = GameLogic.ValidateGame(game);
 
             //assert
-            StringAssert.StartsWith(actual, "Team Two Player One can not be NULL");
+            Assert.StartsWith("Team Two Player One can not be NULL", actual);
         }
 
         [TestMethod]
@@ -240,17 +241,17 @@ namespace TestPickleBallApi
             //arrange
             var game = new GameDto
             {
-                TeamOnePlayerOne = new() { PlayerId = 1 },
-                TeamOnePlayerTwo = new() { PlayerId = 1 },  // <== OJO duplicate player id
-                TeamTwoPlayerOne = new() { PlayerId = 3 },
-                TeamTwoPlayerTwo = new() { PlayerId = 4 },
+                TeamOnePlayerOne = new PlayerDto(PlayerId: 1),
+                TeamOnePlayerTwo = new(1),  // <== OJO duplicate player id
+                TeamTwoPlayerOne = new PlayerDto(3),
+                TeamTwoPlayerTwo = new PlayerDto(4),
             };
 
             //act
             var actual = GameLogic.ValidateGame(game);
 
             //assert
-            StringAssert.StartsWith(actual, "Team One cannot have the same player twice.");
+            Assert.StartsWith("Team One cannot have the same player twice.", actual);
         }
 
         [TestMethod]
@@ -260,17 +261,17 @@ namespace TestPickleBallApi
             //arrange
             var game = new GameDto
             {
-                TeamOnePlayerOne = new() { PlayerId = 1 },
-                TeamOnePlayerTwo = new() { PlayerId = 2 }, 
-                TeamTwoPlayerOne = new() { PlayerId = 4 }, // <== OJO duplicate player id
-                TeamTwoPlayerTwo = new() { PlayerId = 4 },
+                TeamOnePlayerOne = new PlayerDto(PlayerId: 1),
+                TeamOnePlayerTwo = new PlayerDto(PlayerId: 2), 
+                TeamTwoPlayerOne = new PlayerDto(PlayerId: 4),  // <== OJO duplicate player id
+                TeamTwoPlayerTwo = new PlayerDto(4),           
             };
 
             //act
             var actual = GameLogic.ValidateGame(game);
 
             //assert
-            StringAssert.StartsWith(actual, "Team Two cannot have the same player twice.");
+            Assert.StartsWith("Team Two cannot have the same player twice.", actual );
         }
 
         [TestMethod]
@@ -280,31 +281,29 @@ namespace TestPickleBallApi
             //arrange
             var game = new GameDto
             {
-                TypeGameId = 0,// <== OJO invalid typeGameId
-                TeamOnePlayerOne = new() { PlayerId = 1 },
-                TeamOnePlayerTwo = new() { PlayerId = 2 },
-                TeamTwoPlayerOne = new() { PlayerId = 3 }, 
-                TeamTwoPlayerTwo = new() { PlayerId = 4 },
+                TypeGameId = 0,                     // <== OJO invalid typeGameId
+                TeamOnePlayerOne = new PlayerDto(PlayerId: 1),
+                TeamOnePlayerTwo = new PlayerDto(PlayerId: 2),
+                TeamTwoPlayerOne = new PlayerDto(PlayerId: 3),
+                TeamTwoPlayerTwo = new PlayerDto(PlayerId: 4),
             };
 
             //act
             var actual = GameLogic.ValidateGame(game);
 
             //assert
-            StringAssert.Contains(actual, "Valid TypeGameId");
+            Assert.Contains("Valid TypeGameId", actual);
         }
 
 
 
-        [DataTestMethod]
-        [DataRow(1, 2, 1, 4, "Player can not be on both teams")]
-        [DataRow(1, 2, 3, 1, "Player can not be on both teams")]
+        [TestMethod]
         [DataRow(1, null, null, 2, "Player can not be on both teams")]
         [DataRow(1, null, 3, null, "Player can not be on both teams")]
         [DataRow(1, 2, 3, 2, "Player can not be on both teams")]
         [DataRow(1, 2, 2, 4, "Player can not be on both teams")]
-        [DataRow(1, 2, 3, 1, "Player can not be on both teams")]
-        [DataRow(1, 2, 1, 4, "Player can not be on both teams")]
+        [DataRow(1, 2, 3, 1, "Team 1 first Player can not be on both teams")]
+        [DataRow(1, 2, 1, 4, "Team 1 first Player can not be on both teams")]
         [DataRow(1, 1, 2, 4, "Team One cannot have the same player")]
         [DataRow(1, 2, 3, 3, "Team Two cannot have the same player")]
 
@@ -314,20 +313,21 @@ namespace TestPickleBallApi
             //arrange
             var game = new GameDto
             {
-                TeamOnePlayerOne = new() { PlayerId = p1 },
-                TeamOnePlayerTwo = new() { PlayerId = p2 },
-                TeamTwoPlayerOne = new() { PlayerId = p3 },
-                TeamTwoPlayerTwo = new() { PlayerId = p4 },
+                TypeGameId = 1,
+                TeamOnePlayerOne = new PlayerDto(PlayerId: p1),
+                TeamOnePlayerTwo = new PlayerDto(PlayerId: p2),
+                TeamTwoPlayerOne = new PlayerDto(PlayerId: p3),
+                TeamTwoPlayerTwo = new PlayerDto(PlayerId: p4),
             };
 
             //act
             var actual = GameLogic.ValidateGame(game);
 
             //assert
-            StringAssert.StartsWith(actual, expected);
+            Assert.StartsWith(expected, actual);
         }
 
-        [DataTestMethod]
+        [TestMethod]
         [DataRow(null, null, "")]
         [DataRow(11, null, "")]
         [DataRow(null, 8, "")]
@@ -340,10 +340,10 @@ namespace TestPickleBallApi
             //arrange
             var game = new GameDto
             {
-                TeamOnePlayerOne = new() { PlayerId = 1 },
-                TeamOnePlayerTwo = new() { PlayerId = 2 },
-                TeamTwoPlayerOne = new() { PlayerId = 3 },
-                TeamTwoPlayerTwo = new() { PlayerId = 4 },
+                TeamOnePlayerOne = new PlayerDto(PlayerId: 1),
+                TeamOnePlayerTwo = new PlayerDto(PlayerId: 2),
+                TeamTwoPlayerOne = new PlayerDto(PlayerId: 3),
+                TeamTwoPlayerTwo = new PlayerDto(PlayerId: 4),
                 TeamOneScore = s1,
                 TeamTwoScore = s2,  
             };
@@ -352,10 +352,10 @@ namespace TestPickleBallApi
             var actual = GameLogic.ValidateGame(game);
 
             //assert
-            StringAssert.Contains(actual, expected);
+            Assert.Contains(expected, actual);
         }
 
-        [DataTestMethod]
+        [TestMethod]
         [DataRow(null, null, null, "")]
         [DataRow(  11, null, null, "both score must be NULL")]
         [DataRow(null,    8, null, "both score must be NULL")]
@@ -372,11 +372,11 @@ namespace TestPickleBallApi
             //arrange
             var game = new GameDto
             {
-                TeamOnePlayerOne = new() { PlayerId = 1 },
-                TeamOnePlayerTwo = new() { PlayerId = 2 },
-                TeamTwoPlayerOne = new() { PlayerId = 3 },
-                TeamTwoPlayerTwo = new() { PlayerId = 4 },
+                TeamOnePlayerOne = new PlayerDto(PlayerId: 1),
+                TeamOnePlayerTwo = new PlayerDto(PlayerId: 2),
                 TeamOneScore = s1,
+                TeamTwoPlayerOne = new PlayerDto(PlayerId: 3),
+                TeamTwoPlayerTwo = new PlayerDto(PlayerId: 4),
                 TeamTwoScore = s2,
                 PlayedDate = ticks.HasValue ? new DateTimeOffset(ticks.Value, TimeSpan.Zero) : null,
                 TypeGameId = 1,
@@ -392,7 +392,7 @@ namespace TestPickleBallApi
             }
             else
             {
-                StringAssert.Contains(actual, expected);
+                Assert.Contains(expected, actual);
             }
         }
     }

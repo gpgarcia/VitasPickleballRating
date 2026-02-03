@@ -18,6 +18,16 @@ namespace PickleBallAPI.Controllers
             return players;
         }
 
+        public static async Task<Player[]> GetAllPlayersRawAsync(this VprContext context)
+        {
+            var players = await context
+                .Players
+                .ToArrayAsync()
+                ;
+            return players;
+        }
+
+
         public static async Task<Player?> GetPlayerByIdAsync(this VprContext context, int playerId)
         {
             var player = await context

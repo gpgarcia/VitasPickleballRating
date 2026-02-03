@@ -22,10 +22,10 @@ public partial class Facility
     public int NumberCourts { get; set; }
 
     public int TypeFacilityId { get; set; }
-    public TypeFacility TypeFacility { get; set; } =null!;
 
     public string? Notes { get; set; }
 
-    public DateTimeOffset ChangedTime { get; set; }
+    public long ChangedTime { get; set; }
 
+    public virtual TypeFacility TypeFacility { get; set; } = null!;
 }

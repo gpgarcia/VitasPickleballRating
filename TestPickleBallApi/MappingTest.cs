@@ -50,11 +50,11 @@ public class MappingTest
             LastName = "Player",
         };
         var expected = new PlayerDto
-        {
-            PlayerId = 1,
-            FirstName = "Test",
-            LastName = "Player",
-        };
+        (
+            PlayerId: 1,
+            FirstName: "Test",
+            LastName: "Player"
+        );
         var actual = _mapper.Map<PlayerDto>(player);
         Assert.AreEqual(expected.PlayerId, actual.PlayerId);
         Assert.AreEqual(expected.FirstName, actual.FirstName);
@@ -71,11 +71,11 @@ public class MappingTest
             LastName = "Player",
         };
         var player = new PlayerDto
-        {
-            PlayerId = 1,
-            FirstName = "Test",
-            LastName = "Player",
-        };
+        (
+            PlayerId: 1,
+            FirstName: "Test",
+            LastName: "Player"
+        );
         var actual = _mapper.Map<Player>(player);
         Assert.AreEqual(expected.PlayerId, actual.PlayerId);
         Assert.AreEqual(expected.FirstName, actual.FirstName);
@@ -88,6 +88,7 @@ public class MappingTest
         var expected = new Game
         {
             GameId = 1,
+            FacilityId =2,
             TeamOnePlayerOneId = 1,
             TeamOnePlayerTwoId = 2,
             TeamTwoPlayerOneId = 3,
@@ -101,17 +102,18 @@ public class MappingTest
         var gameDto = new GameDto
         {
             GameId = 1,
-            TeamOnePlayerOne = new PlayerDto { PlayerId = 1, FirstName = "Test1", LastName = "Player1" },
-            TeamOnePlayerTwo = new PlayerDto { PlayerId = 2, FirstName = "Test2", LastName = "Player2" },
-            TeamTwoPlayerOne = new PlayerDto { PlayerId = 3, FirstName = "Test3", LastName = "Player3" },
-            TeamTwoPlayerTwo = new PlayerDto { PlayerId = 4, FirstName = "Test4", LastName = "Player4" },
+            Facility = new FacilityDto ( FacilityId : 2 ),
+            TeamOnePlayerOne = new PlayerDto ( PlayerId : 1, FirstName : "Test1", LastName : "Player1" ),
+            TeamOnePlayerTwo = new PlayerDto ( PlayerId : 2, FirstName : "Test2", LastName : "Player2" ),
+            TeamTwoPlayerOne = new PlayerDto ( PlayerId : 3, FirstName : "Test3", LastName : "Player3" ),
+            TeamTwoPlayerTwo = new PlayerDto ( PlayerId : 4, FirstName : "Test4", LastName : "Player4" ),
             TeamOneScore = 11,
             TeamTwoScore = 8,
             TypeGameId = 1,
             PlayedDate = new DateTimeOffset(2025, 01, 01, 13, 15, 30, TimeSpan.FromHours(-4.0)),
-            TypeGame = new TypeGameDto { TypeGameId = 1, GameType = "Recreational" }            
+            TypeGame = new TypeGameDto ( TypeGameId: 1, Name: "Recreational" )
         };
-        var actual = _mapper.Map<Game>(gameDto);
+        Game actual = _mapper.Map<Game>(gameDto);
         Assert.IsNotNull(actual);
         Assert.AreEqual(expected.GameId, actual.GameId);
         Assert.AreEqual(expected.TeamOneScore, actual.TeamOneScore);

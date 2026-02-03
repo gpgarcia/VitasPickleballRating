@@ -18,15 +18,15 @@ public class EloCalculatorTests
         int opponent4Rating = 250;
 
         // Act
-        double result1 = EloCalculator.ExpectedTeamOutcome(player1Rating, player2Rating, opponent3Rating, opponent4Rating);
-        double result2 = EloCalculator.ExpectedTeamOutcome(opponent3Rating, opponent4Rating, player1Rating, player2Rating);
+        decimal result1 = EloCalculator.ExpectedTeamOutcome(player1Rating, player2Rating, opponent3Rating, opponent4Rating);
+        decimal result2 = EloCalculator.ExpectedTeamOutcome(opponent3Rating, opponent4Rating, player1Rating, player2Rating);
 
         // Assert
-        Assert.IsTrue(result1 > 0.0, "ExpectedTeamOutcome should return a positive value.");
-        Assert.IsTrue(result1 <= 1.0, "ExpectedTeamOutcome should return probability.");
-        Assert.AreEqual(result2, 1.0-result1, 0.001 , "ET2 = 1 - ET1.");
-        Assert.AreEqual(0.507, result1, 0.001);
-        Assert.AreEqual(15.0, Math.Round(result1*29)); 
+        Assert.IsGreaterThan(0.0m, result1, "ExpectedTeamOutcome should return a positive value.");
+        Assert.IsLessThanOrEqualTo(1.0m, result1, "ExpectedTeamOutcome should return probability.");
+        Assert.AreEqual(result2, 1.0m-result1, 0.001m , "ET2 = 1 - ET1.");
+        Assert.AreEqual(0.507m, result1, 0.001m);
+        Assert.AreEqual(15.0m, Math.Round(result1*29)); 
 
     }
 
@@ -40,11 +40,11 @@ public class EloCalculatorTests
         int opponent4Rating = 350;
 
         // Act
-        double result1 = EloCalculator.ExpectedTeamOutcome(player1Rating, player2Rating, opponent3Rating, opponent4Rating);
-        double result2 = EloCalculator.ExpectedTeamOutcome(player2Rating, player1Rating, opponent3Rating, opponent4Rating);
+        decimal result1 = EloCalculator.ExpectedTeamOutcome(player1Rating, player2Rating, opponent3Rating, opponent4Rating);
+        decimal result2 = EloCalculator.ExpectedTeamOutcome(player2Rating, player1Rating, opponent3Rating, opponent4Rating);
 
         // Assert
-        Assert.AreEqual(result1, result2, 0.001, "ExpectedTeamOutcome should be symmetric for player order.");
+        Assert.AreEqual(result1, result2, 0.001m, "ExpectedTeamOutcome should be symmetric for player order.");
     }
 
     [TestMethod]
@@ -57,10 +57,10 @@ public class EloCalculatorTests
         int opponent4Rating = 700;
 
         // Act
-        double result1 = EloCalculator.ExpectedTeamOutcome(player1Rating, player2Rating, opponent3Rating, opponent4Rating);
+        decimal result1 = EloCalculator.ExpectedTeamOutcome(player1Rating, player2Rating, opponent3Rating, opponent4Rating);
 
         // Assert
-        Assert.AreEqual(0.0, result1, 0.001, "ExpectedTeamOutcome should be 0.0.");
+        Assert.AreEqual(0.0m, result1, 0.001m, "ExpectedTeamOutcome should be 0.0.");
     }
 
     [TestMethod]
@@ -73,10 +73,10 @@ public class EloCalculatorTests
         int opponent4Rating = 250;
 
         // Act
-        double result1 = EloCalculator.ExpectedTeamOutcome(player1Rating, player2Rating, opponent3Rating, opponent4Rating);
+        decimal result1 = EloCalculator.ExpectedTeamOutcome(player1Rating, player2Rating, opponent3Rating, opponent4Rating);
 
         // Assert
-        Assert.AreEqual(0.053, result1, 0.001, "ExpectedTeamOutcome should be 5.3%.");
+        Assert.AreEqual(0.053m, result1, 0.001m, "ExpectedTeamOutcome should be 5.3%.");
     }
 
     [TestClass]
@@ -85,7 +85,7 @@ public class EloCalculatorTests
 
         private const double KFactor = 40.0;
 
-        [DataTestMethod]
+        [TestMethod]
         [DataRow(200, 200, 0.5, 1.0, 210, 210)]
         [DataRow(300, 300, 0.5, 0.0, 290, 290)]
         [DataRow(400, 400, 0.6, 1.0, 408, 408)]
@@ -99,16 +99,16 @@ public class EloCalculatorTests
             int player1Rating, int player2Rating, double expectedOutcome, double actualOutcome,
             int expectedP1Rating, int expectedP2Rating)
         {
-            var (newP1Rating, newP2Rating) = EloCalculator.CalculateNewRating(player1Rating, player2Rating, expectedOutcome, actualOutcome, KFactor);
+            var (newP1Rating, newP2Rating) = EloCalculator.CalculateNewRating(player1Rating, player2Rating, (decimal)expectedOutcome, (decimal)actualOutcome, KFactor);
 
-            Assert.IsTrue(newP1Rating >= 200, "Player 1 rating should not be below minimum.");
-            Assert.IsTrue(newP2Rating >= 200, "Player 2 rating should not be below minimum.");
+            Assert.IsGreaterThanOrEqualTo(200, newP1Rating, "Player 1 rating should not be below minimum.");
+            Assert.IsGreaterThanOrEqualTo(200, newP2Rating, "Player 2 rating should not be below minimum.");
             var change = (newP1Rating + newP2Rating) - (player1Rating + player2Rating);
             var isHigher = actualOutcome > expectedOutcome;
             if (isHigher)
             {
-                Assert.IsTrue(change > 0, "Team rating should increase when actual outcome is better than expected.");
-                Assert.IsTrue(change <= KFactor, "Team rating change should not exceed K-Factor.");
+                Assert.IsGreaterThan(0, change, "Team rating should increase when actual outcome is better than expected.");
+                Assert.IsLessThanOrEqualTo(KFactor, change, "Team rating change should not exceed K-Factor.");
             }
             else if (Math.Abs(actualOutcome - expectedOutcome) < 0.001)
             {
@@ -116,8 +116,8 @@ public class EloCalculatorTests
             }
             else
             {
-                Assert.IsTrue(change < 0, "Team rating should decrease when actual outcome is worse than expected.");
-                Assert.IsTrue(change <= KFactor, "Team rating change should not exceed K-Factor.");
+                Assert.IsLessThan(0, change, "Team rating should decrease when actual outcome is worse than expected.");
+                Assert.IsLessThanOrEqualTo(KFactor, change, "Team rating change should not exceed K-Factor.");
             }
             Assert.AreEqual(expectedP1Rating, newP1Rating);
             Assert.AreEqual(expectedP2Rating, newP2Rating);
