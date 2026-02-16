@@ -15,11 +15,9 @@ public partial class Game
 
     public int TeamOnePlayerOneId { get; set; }
 
-    public int TeamOnePlayerTwoId { get; set; }
-
+    public int? TeamOnePlayerTwoId { get; set; }
     public int TeamTwoPlayerOneId { get; set; }
-
-    public int TeamTwoPlayerTwoId { get; set; }
+    public int? TeamTwoPlayerTwoId { get; set; }
 
     public int? TeamOneScore { get; set; }
 
@@ -29,7 +27,9 @@ public partial class Game
 
     public virtual Facility? Facility { get; set; }
 
-    public virtual GamePrediction? GamePrediction { get; set; }
+    public virtual GamePrediction? Prediction { get; set; }
+
+    public virtual ICollection<PlayerRating> PlayerRatings { get; set; } = new List<PlayerRating>();
 
     public virtual Player TeamOnePlayerOne { get; set; } = null!;
 

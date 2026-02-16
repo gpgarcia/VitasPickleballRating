@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build">
+  <Sdk Name="Microsoft.Build.Sql" Version="2.0.0" />
+  <PropertyGroup>
+    <Name>vpr</Name>
+    <!-- SQL Server 2019	-->
+    <!--<SqlServerVersion>Sql150</SqlServerVersion>
+		<DSP>Microsoft.Data.Tools.Schema.Sql.Sql150DatabaseSchemaProvider</DSP>-->
+    <!-- SQL Server 2022	-->
+    <SqlServerVersion>Sql160</SqlServerVersion>
+    <DSP>Microsoft.Data.Tools.Schema.Sql.Sql160DatabaseSchemaProvider</DSP>
+    <!-- Azure SQL Server-->
+    <!--<SqlServerVersion>Sql170</SqlServerVersion>
+		<DSP>Microsoft.Data.Tools.Schema.Sql.Sql170DatabaseSchemaProvider</DSP>-->
+    <ModelCollation>1033, CI</ModelCollation>
+    <TargetDatabaseSet>True</TargetDatabaseSet>
+    <ProjectGuid>{2d22d599-6475-4ade-9bfe-25754645f4f3}</ProjectGuid>
+  </PropertyGroup>
+  <ItemGroup>
+    <Folder Include="UtilityScripts\" />
+    <Folder Include="Tables\" />
+    <Folder Include="Views\" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="vpr.publish.xml" />
+    <Content Include="Tables\*.sql" />
+    <Content Include="Views\*.sql" />
+    <None Include="vpr.dotnet.sqlproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="UtilityScripts\StdQueries.sql" />
+    <PostDeploy Include="UtilityScripts\Script.PostDeployment1.sql" />
+    <RefactorLog Include="vpr.refactorlog" />
+  </ItemGroup>
+</Project>

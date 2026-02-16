@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Time.Testing;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using PickleBallAPI;
@@ -25,6 +26,7 @@ public class PlayersControllerTests
     private DbContextOptions<VprContext> _options = null!;
     private IMapper _mapper = null!;
     private ILoggerFactory _loggerFactory = null!;
+    private TimeProvider time = null!;
 
     [TestInitialize]
     public void Setup()
@@ -52,7 +54,7 @@ public class PlayersControllerTests
         context.Database.EnsureCreated();
 
         _mapper = new Mapper(new MapperConfiguration(cfg => cfg.AddProfile<PickleBallProfile>(), _loggerFactory));
-
+        time = new FakeTimeProvider(DateTimeOffset.UtcNow);
         using var seedContext = new VprContext(_options);
 
 
@@ -82,7 +84,7 @@ public class PlayersControllerTests
     public async Task GetPlayers_ReturnsAllPlayers()
     {
         using var context = new VprContext(_options);
-        var controller = new PlayerController(context, _mapper,_loggerFactory.CreateLogger<PlayerController>());
+        var controller = new PlayerController(context, _mapper, time, _loggerFactory.CreateLogger<PlayerController>());
 
         var result = await controller.GetPlayers();
 
@@ -98,7 +100,7 @@ public class PlayersControllerTests
     public async Task GetPlayer_ReturnsPlayer_WhenExists()
     {
         using var context = new VprContext(_options);
-        var controller = new PlayerController(context, _mapper, _loggerFactory.CreateLogger<PlayerController>());
+        var controller = new PlayerController(context, _mapper, time, _loggerFactory.CreateLogger<PlayerController>());
 
         var result = await controller.GetPlayer(1);
 
@@ -113,7 +115,7 @@ public class PlayersControllerTests
     public async Task GetPlayer_ReturnsNotFound_WhenMissing()
     {
         using var context = new VprContext(_options);
-        var controller = new PlayerController(context, _mapper, _loggerFactory.CreateLogger<PlayerController>());
+        var controller = new PlayerController(context, _mapper, time, _loggerFactory.CreateLogger<PlayerController>());
 
         var result = await controller.GetPlayer(-1);
 
@@ -124,7 +126,7 @@ public class PlayersControllerTests
     public async Task GetPlayerRatings_ReturnsRatings()
     {
         using var context = new VprContext(_options);
-        var controller = new PlayerController(context, _mapper, _loggerFactory.CreateLogger<PlayerController>());
+        var controller = new PlayerController(context, _mapper, time, _loggerFactory.CreateLogger<PlayerController>());
 
         var result = await controller.GetPlayerRatings(1);
 
@@ -141,7 +143,7 @@ public class PlayersControllerTests
     public async Task GetPlayerRatings_NotFound()
     {
         using var context = new VprContext(_options);
-        var controller = new PlayerController(context, _mapper, _loggerFactory.CreateLogger<PlayerController>());
+        var controller = new PlayerController(context, _mapper, time, _loggerFactory.CreateLogger<PlayerController>());
 
         var result = await controller.GetPlayerRatings(-1);
 
@@ -153,7 +155,7 @@ public class PlayersControllerTests
     public async Task GetLatestRatingBeforeDate_ReturnsCorrectRating()
     {
         using var context = new VprContext(_options);
-        var controller = new PlayerController(context, _mapper, _loggerFactory.CreateLogger<PlayerController>());
+        var controller = new PlayerController(context, _mapper, time, _loggerFactory.CreateLogger<PlayerController>());
 
         var result = await controller.GetLatestRatingBeforeDate(1, new DateTime(2025, 09, 01)) as OkObjectResult;
 
@@ -167,7 +169,7 @@ public class PlayersControllerTests
     public async Task GetLatestRatingBeforeDate_ReturnsNotFound_WhenNoMatch()
     {
         using var context = new VprContext(_options);
-        var controller = new PlayerController(context, _mapper, _loggerFactory.CreateLogger<PlayerController>());
+        var controller = new PlayerController(context, _mapper, time, _loggerFactory.CreateLogger<PlayerController>());
 
         var result = await controller.GetLatestRatingBeforeDate(1, new DateTime(2024, 01, 01));
 
@@ -178,7 +180,7 @@ public class PlayersControllerTests
     public async Task PostPlayer_CreatesNewPlayer()
     {
         using var context = new VprContext(_options);
-        var controller = new PlayerController(context, _mapper, _loggerFactory.CreateLogger<PlayerController>());
+        var controller = new PlayerController(context, _mapper, time, _loggerFactory.CreateLogger<PlayerController>());
 
         var newPlayerDto = new PlayerDto ( FirstName : "New", LastName : "Player" );
         var result = await controller.PostPlayer(newPlayerDto);
@@ -191,7 +193,7 @@ public class PlayersControllerTests
     public async Task PutPlayer_UpdatesPlayer()
     {
         using var context = new VprContext(_options);
-        var controller = new PlayerController(context, _mapper, _loggerFactory.CreateLogger<PlayerController>());
+        var controller = new PlayerController(context, _mapper, time,_loggerFactory.CreateLogger<PlayerController>());
 
         var updatedDto = new PlayerDto { PlayerId = 1, FirstName = "Updated", LastName = "Player" };
         var result = await controller.PutPlayer(1, updatedDto);
@@ -203,7 +205,7 @@ public class PlayersControllerTests
     public async Task PutPlayer_ReturnsBadRequest_WhenIdMismatch()
     {
         using var context = new VprContext(_options);
-        var controller = new PlayerController(context, _mapper, _loggerFactory.CreateLogger<PlayerController>());
+        var controller = new PlayerController(context, _mapper, time, _loggerFactory.CreateLogger<PlayerController>());
 
         var updatedDto = new PlayerDto { PlayerId = 99, FirstName = "Updated", LastName = "Player" };
         var result = await controller.PutPlayer(1, updatedDto);
@@ -219,7 +221,7 @@ public class PlayersControllerTests
         // Arrange
         var log = _loggerFactory.CreateLogger<PlayerController>();
         using var ctx = new VprContext(_options);
-        var target = new PlayerController(ctx, _mapper, log);
+        var target = new PlayerController(ctx, _mapper, time, log);
 
         // Act
         var actionResult = target.ExportRawPlayerCsvAsync().Result;
@@ -262,7 +264,7 @@ public class PlayersControllerTests
         ctx.Players.RemoveRange(ctx.Players); // remove player
         ctx.SaveChanges();
 
-        var target = new PlayerController(ctx, _mapper, log);
+        var target = new PlayerController(ctx, _mapper, time, log);
 
         // Act
         var actionResult = target.ExportRawPlayerCsvAsync().Result;
@@ -290,7 +292,7 @@ public class PlayersControllerTests
         var mockCtx = new Mock<VprContext>(_options) { CallBase = false };
         mockCtx.SetupGet(c => c.Players).Throws(new DbUpdateException("Concurrency exception"));
 
-        var target = new PlayerController(mockCtx.Object, _mapper, log);
+        var target = new PlayerController(mockCtx.Object, _mapper, time, log);
 
         // Act
         var actionResult = Assert.ThrowsAsync<DbUpdateException>(() => target.ExportRawPlayerCsvAsync()).Result;

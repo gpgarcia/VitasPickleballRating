@@ -19,6 +19,7 @@ namespace PickleBallAPI.Controllers.DTO;
 /// <param name="NumberCourts">Number of courts at the facility.</param>
 /// <param name="TypeFacility">Facility type metadata.</param>
 /// <param name="Notes">Optional free-form notes about the facility.</param>
+/// <param name="ChangedTime">Concurrency token</param>
 public sealed record FacilityDto(
     int? FacilityId = null,
     string? Name = null,
@@ -29,5 +30,6 @@ public sealed record FacilityDto(
     string? PostalCode = null,
     int? NumberCourts = null,
     TypeFacilityDto? TypeFacility = null,
-    string? Notes = null
+    string? Notes = null,
+    long ChangedTime = 0
 );

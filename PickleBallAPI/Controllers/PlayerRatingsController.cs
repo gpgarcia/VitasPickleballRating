@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using PickleBallAPI.Controllers.DTO;
 using PickleBallAPI.Models;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -11,26 +12,17 @@ namespace PickleBallAPI.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class PlayerRatingsController : ControllerBase
+    public class PlayerRatingsController(VprContext context, IMapper mapper, TimeProvider time) : ControllerBase
     {
-        private readonly VprContext _context;
-        private readonly IMapper _mapper;
-
-        public PlayerRatingsController(VprContext context, IMapper mapper)
-        {
-            _context = context;
-            _mapper = mapper;
-        }
-
         // GET: api/PlayerRatings
         [HttpGet]
         public async Task<ActionResult<IEnumerable<PlayerRatingDto>>> GetPlayerRatings()
         {
-            var ratings = await _context
+            var ratings = await context
                 .PlayerRatings
                 .ToListAsync()
                 ;
-            PlayerRatingDto[] ratingDtos = _mapper.Map<PlayerRatingDto[]>(ratings);
+            PlayerRatingDto[] ratingDtos = mapper.Map<PlayerRatingDto[]>(ratings);
             return Ok(ratingDtos);
         }
 
@@ -38,7 +30,7 @@ namespace PickleBallAPI.Controllers
         [HttpGet("{id}")]
         public async Task<ActionResult<PlayerRatingDto>> GetPlayerRating(int id)
         {
-            var playerRating = await _context
+            var playerRating = await context
                 .PlayerRatings
                 .Include(r => r.Player)
                 .FirstOrDefaultAsync(r => r.PlayerRatingId == id)
@@ -48,9 +40,9 @@ namespace PickleBallAPI.Controllers
             {
                 return NotFound();
             }
-            var player = await _context.Players.FindAsync(playerRating.PlayerId);
+            var player = await context.Players.FindAsync(playerRating.PlayerId);
 
-            var ratingDto = _mapper.Map<PlayerRatingDto>(playerRating);
+            var ratingDto = mapper.Map<PlayerRatingDto>(playerRating);
             return Ok(ratingDto);
         }
 
@@ -69,10 +61,10 @@ namespace PickleBallAPI.Controllers
                 return NotFound($"No Player Rating with PlayerRatingId={id}");
             }
 
-            var playerRating = _mapper.Map<PlayerRating>(playerRatingDto);
-            _context.Entry(playerRating).State = EntityState.Modified;
+            var playerRating = mapper.Map<PlayerRating>(playerRatingDto);
+            context.Entry(playerRating).State = EntityState.Modified;
 
-            await _context.SaveChangesAsync();
+            await context.SaveChangesAsync();
             return NoContent();
         }
 
@@ -81,9 +73,10 @@ namespace PickleBallAPI.Controllers
         [HttpPost]
         public async Task<ActionResult<PlayerRatingDto>> PostPlayerRating(PlayerRatingDto playerRatingDto)
         {
-            var playerRating = _mapper.Map<PlayerRating>(playerRatingDto);
-            _context.PlayerRatings.Add(playerRating);
-            await _context.SaveChangesAsync();
+            var playerRating = mapper.Map<PlayerRating>(playerRatingDto);
+            playerRating.ChangedTime = time.GetUtcNow().ToUnixTimeMilliseconds();
+            context.PlayerRatings.Add(playerRating);
+            await context.SaveChangesAsync();
 
             return CreatedAtAction("GetPlayerRating", new { id = playerRating.PlayerRatingId }, playerRating);
         }
@@ -92,21 +85,21 @@ namespace PickleBallAPI.Controllers
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeletePlayerRating(int id)
         {
-            var playerRating = await _context.PlayerRatings.FindAsync(id);
+            var playerRating = await context.PlayerRatings.FindAsync(id);
             if (playerRating == null)
             {
                 return NotFound();
             }
 
-            _context.PlayerRatings.Remove(playerRating);
-            await _context.SaveChangesAsync();
+            context.PlayerRatings.Remove(playerRating);
+            await context.SaveChangesAsync();
 
             return NoContent();
         }
 
         private bool PlayerRatingExists(int id)
         {
-            return _context.PlayerRatings.Any(e => e.PlayerRatingId == id);
+            return context.PlayerRatings.Any(e => e.PlayerRatingId == id);
         }
     }
 }

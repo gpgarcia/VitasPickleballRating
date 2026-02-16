@@ -5,9 +5,9 @@
     [PlayedDate]    DATETIMEOFFSET NULL,
     [TypeGameId]    INT     NOT NULL,
     [TeamOnePlayerOneId]  INT     NOT NULL,
-    [TeamOnePlayerTwoId]  INT     NOT NULL,
+    [TeamOnePlayerTwoId]  INT     NULL,
     [TeamTwoPlayerOneId]  INT     NOT NULL,
-    [TeamTwoPlayerTwoId]  INT     NOT NULL,
+    [TeamTwoPlayerTwoId]  INT     NULL,
     [TeamOneScore]  INT     NULL,
     [TeamTwoScore]  INT     NULL, 
     -- Use unix epoch milliseconds for UTC timestamps

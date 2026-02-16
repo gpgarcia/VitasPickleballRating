@@ -27,5 +27,7 @@ public partial class Facility
 
     public long ChangedTime { get; set; }
 
+    public virtual ICollection<Game> Games { get; set; } = new List<Game>();
+
     public virtual TypeFacility TypeFacility { get; set; } = null!;
 }

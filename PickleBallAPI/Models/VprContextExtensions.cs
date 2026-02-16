@@ -6,6 +6,23 @@ namespace PickleBallAPI.Models
     {
         partial void OnModelCreatingPartial(ModelBuilder modelBuilder)
         {
+            modelBuilder.Entity<Game>(entity =>
+            {
+                entity.Property(e => e.ChangedTime).IsConcurrencyToken();
+            });
+            modelBuilder.Entity<Player>(entity =>
+            {
+                entity.Property(e => e.ChangedTime).IsConcurrencyToken();
+            });
+            modelBuilder.Entity<PlayerRating>(entity =>
+            {
+                entity.Property(e => e.ChangedTime).IsConcurrencyToken();
+            });
+            modelBuilder.Entity<Facility>(entity =>
+            {
+                entity.Property(e => e.ChangedTime).IsConcurrencyToken();
+            });
+
             //modelBuilder.Entity<Game>(entity =>
             //{
             //    entity

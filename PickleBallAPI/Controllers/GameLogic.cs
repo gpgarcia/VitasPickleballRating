@@ -1,4 +1,9 @@
-﻿using PickleBallAPI.Controllers.DTO;
+﻿using Microsoft.AspNetCore.Components.Web;
+using Microsoft.Build.Framework;
+using Microsoft.CodeAnalysis;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using PickleBallAPI.Controllers.DTO;
 using PickleBallAPI.Models;
 using System;
 using System.Collections.Generic;
@@ -7,9 +12,9 @@ using System.Threading.Tasks;
 
 namespace PickleBallAPI.Controllers
 {
-    public static class GameLogic
+    public class GameLogic(TimeProvider time, ILogger<GameLogic> logger )
     {
-        public static string ValidateGame(GameDto gameDto)
+        public string ValidateGame(GameDto gameDto)
         {
             string msg = string.Empty;
             if (gameDto == null)
@@ -17,11 +22,11 @@ namespace PickleBallAPI.Controllers
                 msg += "Game data is null.\n";
                 return msg;
             }
-            if (gameDto.TeamOnePlayerOne == null)
+            if (gameDto.TeamOnePlayerOne?.PlayerId == null )
             {
                 msg += "Team One Player One can not be NULL\n";
             }
-            if (gameDto.TeamTwoPlayerOne == null)
+            if (gameDto.TeamTwoPlayerOne?.PlayerId == null)
             {
                 msg += "Team Two Player One can not be NULL\n";
             }
@@ -33,7 +38,7 @@ namespace PickleBallAPI.Controllers
             {
                 msg += "Team One cannot have the same player twice.\n";
             }
-            if (gameDto.TeamTwoPlayerOne.PlayerId == gameDto.TeamTwoPlayerTwo.PlayerId)
+            if (gameDto.TeamTwoPlayerOne.PlayerId == gameDto.TeamTwoPlayerTwo?.PlayerId)
             {
                 msg += "Team Two cannot have the same player twice.\n";
             }
@@ -41,13 +46,13 @@ namespace PickleBallAPI.Controllers
             {
                 msg += "Team 1 first Player can not be on both teams.\n";
             }
-            if ( gameDto.TeamOnePlayerOne.PlayerId == gameDto.TeamTwoPlayerTwo.PlayerId)
+            if (gameDto.TeamOnePlayerOne.PlayerId == gameDto.TeamTwoPlayerTwo?.PlayerId)
             {
                 msg += "Team 1 first Player can not be on both teams.\n";
             }
             if (gameDto.TeamOnePlayerTwo != null &&
                 (gameDto.TeamOnePlayerTwo.PlayerId == gameDto.TeamTwoPlayerOne.PlayerId ||
-                 gameDto.TeamOnePlayerTwo.PlayerId == gameDto.TeamTwoPlayerTwo.PlayerId))
+                 gameDto.TeamOnePlayerTwo.PlayerId == gameDto.TeamTwoPlayerTwo?.PlayerId))
             {
                 msg += "Player can not be on both teams.\n";
             }
@@ -72,7 +77,7 @@ namespace PickleBallAPI.Controllers
                 {
                     msg += "If a played date is provided, both scores must be provided.\n";
                 }
-                if (gameDto.PlayedDate > DateTimeOffset.Now)
+                if (gameDto.PlayedDate > time.GetLocalNow())
                 {
                     msg += "Played date can not be in the future.\n";
                 }
@@ -92,44 +97,74 @@ namespace PickleBallAPI.Controllers
             return msg;
         }
 
-        public static string ValidateGamePlayers(VprContext ctx, GameDto gameDto)
+        public string ValidateGamePlayers(VprContext ctx, GameDto gameDto)
         {
             string msg = string.Empty;
-            msg += ValidatePlayer(gameDto.TeamOnePlayerOne.PlayerId);
-            msg += ValidatePlayer(gameDto.TeamOnePlayerTwo.PlayerId);
-            msg += ValidatePlayer(gameDto.TeamTwoPlayerOne.PlayerId);
-            msg += ValidatePlayer(gameDto.TeamTwoPlayerTwo.PlayerId);
+            msg += ValidatePlayer(gameDto.TeamOnePlayerOne, isRequired: true);
+            msg += ValidatePlayer(gameDto.TeamOnePlayerTwo, isRequired: false);
+            msg += ValidatePlayer(gameDto.TeamTwoPlayerOne, isRequired: true);
+            msg += ValidatePlayer(gameDto.TeamTwoPlayerTwo, isRequired: false);
             return msg;
 
-            string ValidatePlayer(int? playerId)
+            string ValidatePlayer(PlayerDto? player, bool isRequired)
             {
-                string msg = string.Empty;
-                if (playerId == null)
+                if (player == null)
                 {
-                    msg = $"Player Id, canot be null.\n";
-                }   
-                else if (!ctx.PlayerExists(playerId.Value))
-                {
-                    msg = $"Player Id, {playerId}, does not exist.\n";
+                    return isRequired ? "Required player data is null.\n" : string.Empty;
                 }
-                return msg;
+                if (player.PlayerId == 0)
+                {
+                    return "Player Id cannot be 0.\n";
+                }
+                if (!ctx.PlayerExists(player.PlayerId))
+                {
+                    return $"Player Id, {player.PlayerId}, does not exist.\n";
+                }
+                return string.Empty;
             }
         }
-
-        public static async Task<GameRatings> GetPlayerRatingsAsync(VprContext ctx, Game game, DateTimeOffset playedAt)
+        /// <summary>
+        /// Calculates the prediction and gathers current player ratings for the supplied game.
+        /// </summary>
+        /// <param name="game">The game entity to calculate prediction for.</param>
+        /// <param name="context">The database context for fetching player ratings.</param>
+        /// <returns>
+        /// A tuple containing:
+        /// - <c>GameLogic.GameRatings ratings</c>: current player ratings used for prediction.
+        /// - <c>GamePrediction gamePrediction</c>: the computed prediction for the game.
+        /// </returns>
+        public async Task<GamePrediction> CalculatePredictionAsync(VprContext context, Game game)
         {
-            return new GameRatings
+            var playedAt = game.PlayedDate ?? time.GetLocalNow();
+            var gameId = game.GameId;
+            logger.LogTrace("Calculating Game Prediction  for game {gameId} played at {playedAt}.", gameId, playedAt);
+
+            var ratings = await GetPlayerRatingsAsync(context, game, playedAt);
+
+            var gamePrediction = GetGamePrediction(game, playedAt, ratings);
+            return gamePrediction;
+        }
+
+
+        public async Task<GameRatings> GetPlayerRatingsAsync(VprContext ctx, Game game, DateTimeOffset playedAt)
+        {
+            var tmp = new GameRatings
             {
-                T1P1 = await GetRating(game.TeamOnePlayerOneId, playedAt),
-                T1P2 = await GetRating(game.TeamOnePlayerTwoId, playedAt),
-                T2P1 = await GetRating(game.TeamTwoPlayerOneId, playedAt),
-                T2P2 = await GetRating(game.TeamTwoPlayerTwoId, playedAt),
+                T1P1 = (await GetRatingAsync(game.TeamOnePlayerOneId, playedAt)).Value,
+                T1P2 = await GetRatingAsync(game.TeamOnePlayerTwoId, playedAt),
+                T2P1 = (await GetRatingAsync(game.TeamTwoPlayerOneId, playedAt)).Value,
+                T2P2 = await GetRatingAsync(game.TeamTwoPlayerTwoId, playedAt),
             };
+            return tmp;
             // Helper function to fetch rating
-            async Task<int> GetRating(int playerId, DateTimeOffset playedAt)
+            async Task<int?> GetRatingAsync(int? playerId, DateTimeOffset playedAt)
             {
-                var PlayerRating = await ctx.GetLatestPlayerRatingBeforeDateAsync(playerId, playedAt);
-                return PlayerRating?.Rating ?? EloCalculator.InitialRating;
+                if (playerId != null)
+                {
+                    var PlayerRating = await ctx.GetLatestPlayerRatingBeforeDateAsync(playerId.Value, playedAt);
+                    return PlayerRating?.Rating ?? EloCalculator.InitialRating;
+                }
+                return null;
             }
         }
 
@@ -142,7 +177,7 @@ namespace PickleBallAPI.Controllers
         /// <exception cref="ArgumentOutOfRangeException">
         /// Thrown when <paramref name="expectedOutcome"/> is less than 0.0 or greater than 1.0.
         /// </exception>
-        public static (int team1Score, int team2Score) CalculateExpectedScore(decimal expectedOutcome)
+        public (int team1Score, int team2Score) CalculateExpectedScore(decimal expectedOutcome)
         {
             var team1Wins = true;
             if (expectedOutcome < 0.0m || expectedOutcome > 1.0m)
@@ -176,7 +211,7 @@ namespace PickleBallAPI.Controllers
             return (team1Score, team2Score);
         }
 
-        private static (int,int) AssignScore(bool team1Wins, int winScore, int lossScore)
+        private static (int, int) AssignScore(bool team1Wins, int winScore, int lossScore)
         {
             int team1Score;
             int team2Score;
@@ -192,99 +227,157 @@ namespace PickleBallAPI.Controllers
             return (team1Score, team2Score);
         }
 
-        public static IEnumerable<PlayerRating> CalculateNewPlayerRatings(Game game, GameRatings ratings)
+        public IEnumerable<PlayerRating> CalculateNewPlayerRatings(Game game)
         {
-            GamePrediction gamePrediction = game.GamePrediction 
+            IEnumerable<PlayerRating> tmp;
+            GamePrediction gamePrediction = game.Prediction
                 ?? throw new ApplicationException("Game Prediction cannot be null");
-            List<PlayerRating> newRatings = [];
-            if (game.PlayedDate != null)
+            if ( game.TeamOnePlayerTwoId is not null && game.TeamTwoPlayerTwoId is not null)
             {
-                var PlayerRatings = GetNewPlayerRatings(game, gamePrediction, ratings);
-                foreach (var pr in PlayerRatings)
-                {
-                    newRatings.Add(pr);
-                }
+                tmp = GetNewPlayerRatingsDoubles(game);
             }
-            return newRatings;
-        }
-        public static GamePrediction GetGamePrediction(int gameId, DateTimeOffset playedAt, GameRatings ratings)
-        {
-            decimal expectedOutcome = EloCalculator.ExpectedTeamOutcome2(ratings.T1P1, ratings.T1P2, ratings.T2P1, ratings.T2P2);
-            (int t1Score, int t2Score) = CalculateExpectedScore(expectedOutcome);
-            var gamePrediction = new GamePrediction
+            else
             {
-                GameId = gameId,
-                Game = null!,
-                CreatedAt = playedAt,
-                T1p1rating = ratings.T1P1,
-                T1p2rating = ratings.T1P2,
-                T2p1rating = ratings.T2P1,
-                T2p2rating = ratings.T2P2,
-                T1predictedWinProb = expectedOutcome,
-                ExpectT1score = t1Score,
-                ExpectT2score = t2Score,
-            };
-            return gamePrediction;
-        }
-
-        public static IEnumerable<PlayerRating> GetNewPlayerRatings(Game game, GamePrediction gamePrediction, GameRatings ratings)
-        {
-            List<PlayerRating> tmp = [];
-            if (game.PlayedDate != null)
-            {
-                var changedToken = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
-                //var changedToken = DateTimeOffset.UtcNow;
-                // Update player ratings based on game result
-                var kFactor = EloCalculator.CalculateKFactor(ratings.T1P1);
-                //if there is a date scores are not null
-                double T1ActualOutcome = (double)game.TeamOneScore! / (double)(game.TeamTwoScore + game.TeamOneScore)!;
-                (int newP1Rating, int newP2rating) = EloCalculator.CalculateNewRating(ratings.T1P1, ratings.T1P2, gamePrediction.T1predictedWinProb, (decimal)T1ActualOutcome, kFactor);
-                (int newP3Rating, int newP4rating) = EloCalculator.CalculateNewRating(ratings.T2P1, ratings.T2P2, 1.0m - gamePrediction.T1predictedWinProb, (decimal)(1.0 - T1ActualOutcome), kFactor);
-                tmp =
-                [
-                    new()
-                    {
-                        ChangedTime = changedToken,
-                        PlayerId = game.TeamOnePlayerOneId,
-                        Rating = newP1Rating,
-                        RatingDate = (DateTimeOffset)game.PlayedDate!,
-                        GameId = game.GameId,
-                    },
-                    new()
-                    {
-                        ChangedTime = changedToken,
-                        PlayerId = game.TeamOnePlayerTwoId,
-                        Rating = newP2rating,
-                        RatingDate = (DateTimeOffset)game.PlayedDate!,
-                        GameId = game.GameId,
-                    },
-                    new()
-                    {
-                        ChangedTime = changedToken,
-                        PlayerId = game.TeamTwoPlayerOneId,
-                        Rating = newP3Rating,
-                        RatingDate = (DateTimeOffset)game.PlayedDate!,
-                        GameId = game.GameId,
-                    },
-                    new()
-                    {
-                        ChangedTime = changedToken,
-                        PlayerId = game.TeamTwoPlayerTwoId,
-                        Rating = newP4rating,
-                        RatingDate = (DateTimeOffset)game.PlayedDate!,
-                        GameId = game.GameId,
-                    },
-                ];
+                tmp=  GetNewPlayerRatingsSingles(game);
             }
             return tmp;
         }
+        public GamePrediction GetGamePrediction(Game game, DateTimeOffset playedAt, GameRatings ratings)
+        {
+            decimal expectedOutcome = EloCalculator.ExpectedTeamOutcome(ratings.T1P1, ratings.T1P2, ratings.T2P1, ratings.T2P2);
+            (int t1Score, int t2Score) = CalculateExpectedScore(expectedOutcome);
+
+            var gamePrediction = game.Prediction ?? new GamePrediction();
+            bool needsUpdate = false;
+
+            needsUpdate |= UpdatePropertyIfChanged(gamePrediction.GameId, game.GameId, v => gamePrediction.GameId = v);
+            gamePrediction.Game = null!;
+            needsUpdate |= UpdatePropertyIfChanged(gamePrediction.CreatedAt, playedAt, v => gamePrediction.CreatedAt = v);
+            needsUpdate |= UpdatePropertyIfChanged(gamePrediction.T1p1rating, ratings.T1P1, v => gamePrediction.T1p1rating = v);
+            if (ratings.T1P2.HasValue)
+            {
+                needsUpdate |= UpdatePropertyIfChanged(gamePrediction.T1p2rating, ratings.T1P2.Value, v => gamePrediction.T1p2rating = v);
+            }
+            needsUpdate |= UpdatePropertyIfChanged(gamePrediction.T2p1rating, ratings.T2P1, v => gamePrediction.T2p1rating = v);
+            if (ratings.T2P2.HasValue)
+            {
+                needsUpdate |= UpdatePropertyIfChanged(gamePrediction.T2p2rating, ratings.T2P2.Value, v => gamePrediction.T2p2rating = v);
+            }
+            needsUpdate |= UpdatePropertyIfChanged(gamePrediction.T1predictedWinProb, expectedOutcome, v => gamePrediction.T1predictedWinProb = v);
+            needsUpdate |= UpdatePropertyIfChanged(gamePrediction.ExpectT1score, t1Score, v => gamePrediction.ExpectT1score = v);
+            needsUpdate |= UpdatePropertyIfChanged(gamePrediction.ExpectT2score, t2Score, v => gamePrediction.ExpectT2score = v);
+
+            if (needsUpdate)
+            {
+                gamePrediction.ChangedTime = time.GetUtcNow().ToUnixTimeMilliseconds();
+            }
+
+            return gamePrediction;
+
+            static bool UpdatePropertyIfChanged<T>(T currentValue, T newValue, Action<T> setter)
+            {
+                if (EqualityComparer<T>.Default.Equals(currentValue, newValue))
+                {
+                    return false;
+                }
+
+                setter(newValue);
+                return true;
+            }
+        }
+
+        public IEnumerable<PlayerRating> GetNewPlayerRatingsDoubles(Game game)
+        {
+            if (game.PlayedDate == null)
+            {
+                return [];
+            }
+            GamePrediction gamePrediction = game.Prediction
+                ?? throw new ArgumentException("Game Prediction cannot be null");
+            var changedToken = time.GetUtcNow().ToUnixTimeMilliseconds();
+            var kFactor = EloCalculator.CalculateKFactor(game.Prediction.T1p1rating);
+            double t1ActualOutcome = (double)game.TeamOneScore! / (double)(game.TeamTwoScore + game.TeamOneScore)!;
+            (int newP1Rating, int newP2Rating) = EloCalculator.CalculateNewRatingDoubles(gamePrediction.T1p1rating, gamePrediction.T1p2rating, gamePrediction.T1predictedWinProb, (decimal)t1ActualOutcome, kFactor);
+            (int newP3Rating, int newP4Rating) = EloCalculator.CalculateNewRatingDoubles(gamePrediction.T2p1rating, gamePrediction.T2p2rating, 1.0m - gamePrediction.T1predictedWinProb, (decimal)(1.0 - t1ActualOutcome), kFactor);
+            List<PlayerRating> newRatings =
+            [
+                new()
+                {
+                    ChangedTime = changedToken,
+                    PlayerId = game.TeamOnePlayerOneId,
+                    Rating = newP1Rating,
+                    RatingDate = (DateTimeOffset)game.PlayedDate,
+                    GameId = game.GameId,
+                },
+                new()
+                {
+                    ChangedTime = changedToken,
+                    PlayerId = game.TeamOnePlayerTwoId!.Value,
+                    Rating = newP2Rating,
+                    RatingDate = (DateTimeOffset)game.PlayedDate,
+                    GameId = game.GameId,
+                },
+                new()
+                {
+                    ChangedTime = changedToken,
+                    PlayerId = game.TeamTwoPlayerOneId,
+                    Rating = newP3Rating,
+                    RatingDate = (DateTimeOffset)game.PlayedDate,
+                    GameId = game.GameId,
+                },
+                new()
+                {
+                    ChangedTime = changedToken,
+                    PlayerId = game.TeamTwoPlayerTwoId!.Value,
+                    Rating = newP4Rating,
+                    RatingDate = (DateTimeOffset)game.PlayedDate,
+                    GameId = game.GameId,
+                },
+            ];
+            return newRatings;
+        }
+        public IEnumerable<PlayerRating> GetNewPlayerRatingsSingles(Game game)
+        {
+            if (game.PlayedDate == null)
+            {
+                return [];
+            }
+            GamePrediction gamePrediction = game.Prediction
+                ?? throw new ArgumentException("Game Prediction cannot be null");
+            var changedToken = time.GetUtcNow().ToUnixTimeMilliseconds();
+            var kFactor = EloCalculator.CalculateKFactor(gamePrediction.T1p1rating);
+            double t1ActualOutcome = (double)game.TeamOneScore! / (double)(game.TeamTwoScore + game.TeamOneScore)!;
+            var newP1Rating = EloCalculator.CalculateNewRatingSingles(gamePrediction.T1p1rating, gamePrediction.T1predictedWinProb, (decimal)t1ActualOutcome, kFactor);
+            var newP3Rating = EloCalculator.CalculateNewRatingSingles(gamePrediction.T2p1rating, 1.0m - gamePrediction.T1predictedWinProb, (decimal)(1.0 - t1ActualOutcome), kFactor);
+            List<PlayerRating> newRatings =
+            [
+                new()
+                {
+                    ChangedTime = changedToken,
+                    PlayerId = game.TeamOnePlayerOneId,
+                    Rating = newP1Rating,
+                    RatingDate = (DateTimeOffset)game.PlayedDate,
+                    GameId = game.GameId,
+                },
+                new()
+                {
+                    ChangedTime = changedToken,
+                    PlayerId = game.TeamTwoPlayerOneId,
+                    Rating = newP3Rating,
+                    RatingDate = (DateTimeOffset)game.PlayedDate,
+                    GameId = game.GameId,
+                },
+            ];
+            return newRatings;
+        }
+
 
         public class GameRatings
         {
             public int T1P1 { get; set; }
-            public int T1P2 { get; set; }
+            public int? T1P2 { get; set; }
             public int T2P1 { get; set; }
-            public int T2P2 { get; set; }
+            public int? T2P2 { get; set; }
         }
 
     }

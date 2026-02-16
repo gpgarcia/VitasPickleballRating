@@ -2,10 +2,12 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Time.Testing;
 using PickleBallAPI;
 using PickleBallAPI.Controllers;
 using PickleBallAPI.Controllers.DTO;
 using PickleBallAPI.Models;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -17,6 +19,7 @@ namespace TestPickleBallApi
         private DbContextOptions<VprContext> _vprOpt = null!;
         private IMapper _mapper = null!;
         private ILoggerFactory _loggerFactory = null!;
+        private TimeProvider time = null!;
 
         [TestInitialize]
         public void TestInit()
@@ -38,7 +41,7 @@ namespace TestPickleBallApi
                 .UseSqlServer("Server=(localdb)\\ProjectModels;Database=vpr;Integrated Security=True;")
                 .Options;
             _mapper = new Mapper(new MapperConfiguration(cfg => cfg.AddProfile<PickleBallProfile> (), _loggerFactory));
-
+            time = new FakeTimeProvider();
         }
 
         [TestCleanup]
@@ -55,7 +58,7 @@ namespace TestPickleBallApi
             // Arrange
             using var ctx = new VprContext(_vprOpt);
             // Act
-            var target = new PlayerRatingsController(ctx,_mapper);
+            var target = new PlayerRatingsController(ctx,_mapper, time);
             // Assert
             Assert.IsNotNull(target);
             ctx.Dispose();  //double dispose test; no exceptions!!
@@ -67,7 +70,7 @@ namespace TestPickleBallApi
         {
             // Arrange
             using var ctx = new VprContext(_vprOpt);
-            var target = new PlayerRatingsController(ctx, _mapper);
+            var target = new PlayerRatingsController(ctx, _mapper, time);
             // Act
             var actual = target.GetPlayerRatings().Result;
             // Assert
@@ -88,8 +91,15 @@ namespace TestPickleBallApi
             // NOTE: valid after update NOT initial
             // Arrange
             using var ctx = new VprContext(_vprOpt);
-            var target = new PlayerRatingsController(ctx, _mapper);
-            var setup = new GamesController(ctx, _mapper, _loggerFactory.CreateLogger<GamesController>());
+            var target = new PlayerRatingsController(ctx, _mapper, time);
+            var setup = new GamesController
+            (
+                ctx, 
+                _mapper, 
+                time, 
+                new GameLogic(time, _loggerFactory.CreateLogger<GameLogic>()),
+                _loggerFactory.CreateLogger<GamesController>()
+            );
             var x = setup.PutGameUpdate().Result;   
             Assert.IsNotNull(x);
             var ncResult = x as NoContentResult;
@@ -113,7 +123,7 @@ namespace TestPickleBallApi
         {
             // Arrange
             using var ctx = new VprContext(_vprOpt);
-            var target = new PlayerRatingsController(ctx, _mapper);
+            var target = new PlayerRatingsController(ctx, _mapper, time);
             // Act
             var actual = target.GetPlayerRating(-1).Result;
             // Assert

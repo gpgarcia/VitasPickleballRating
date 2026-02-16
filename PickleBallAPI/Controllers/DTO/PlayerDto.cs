@@ -14,9 +14,11 @@
 /// <param name="FirstName">Player's first name.</param>
 /// <param name="NickName">Player's nickname or preferred short name.</param>
 /// <param name="LastName">Player's last/family name.</param>
+/// <param name="ChangedTime">Concurrency Token</param>
 public sealed record PlayerDto(
     int? PlayerId = null,
     string? FirstName = null,
     string? NickName = null,
-    string? LastName = null
+    string? LastName = null,
+    long    ChangedTime = 0
 );

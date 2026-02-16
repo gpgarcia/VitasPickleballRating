@@ -11,27 +11,24 @@ public static class EloCalculator
     const double baseKFactor = 80.0;
 
 
-    public static decimal ExpectedTeamOutcome(int player1Rating, int player2Rating, int oppo3Rating, int oppo4Rating)
+
+
+    public static decimal ExpectedTeamOutcome(int player1Rating, int? player2Rating, int oppo3Rating, int? oppo4Rating)
     {
-        //from https://towardsdatascience.com/developing-an-elo-based-data-driven-ranking-system-for-2v2-multiplayer-games-7689f7d42a53/
-        // resulting ratings not predictive enough :-(
-        decimal[] eo = [
-            ExpectedOutcome(player1Rating, oppo3Rating),
-            ExpectedOutcome(player1Rating, oppo4Rating),
-            ExpectedOutcome(player2Rating, oppo3Rating),
-            ExpectedOutcome(player2Rating, oppo4Rating),
-        ];
+        decimal ep1;
+        if (player2Rating.HasValue && oppo4Rating.HasValue)
+        {
+            //doubles
+            int[] t1 = [player1Rating, player2Rating.Value];
+            int[] t2 = [oppo3Rating, oppo4Rating.Value];
 
-        return eo.Average();
-    }
-
-    public static decimal ExpectedTeamOutcome2(int player1Rating, int player2Rating, int oppo3Rating, int oppo4Rating)
-    {
-        int[] t1 = [player1Rating, player2Rating];
-        int[] t2 = [oppo3Rating, oppo4Rating];
-
-        decimal ep1 = ExpectedOutcome(t1.Average(), t2.Average());
-
+            ep1 = ExpectedOutcome(t1.Average(), t2.Average());
+        }
+        else
+        {
+            //singles
+            ep1 = ExpectedOutcome(player1Rating, oppo3Rating);
+        }
         return ep1;
     }
 
@@ -42,7 +39,13 @@ public static class EloCalculator
     }
 
 
-    public static (int, int) CalculateNewRating(int player1Rating, int player2Rating, decimal expectedOutcome, decimal actualOutcome, double kFactor)
+    public static int CalculateNewRatingSingles(int player1Rating, decimal expectedOutcome, decimal actualOutcome, double kFactor)
+    {
+        decimal change = (decimal)kFactor * (actualOutcome - expectedOutcome);
+        var p1r = Math.Max(Math.Round(player1Rating + change), MinimumRating);
+        return (int)p1r;
+    }
+    public static (int, int) CalculateNewRatingDoubles(int player1Rating, int player2Rating, decimal expectedOutcome, decimal actualOutcome, double kFactor)
     {
         var p1w = (decimal)player1Rating / (decimal)(player1Rating + player2Rating);
         var p2w = (decimal)player2Rating / (decimal)(player1Rating + player2Rating);
@@ -52,6 +55,8 @@ public static class EloCalculator
         var p2r = Math.Max(Math.Round(player2Rating + change * p2w), MinimumRating);
         return ((int)p1r, (int)p2r);
     }
+
+
 
     public static double CalculateKFactor(int currentRating)
     {

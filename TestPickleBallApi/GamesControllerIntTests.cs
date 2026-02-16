@@ -2,10 +2,12 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Time.Testing;
 using PickleBallAPI;
 using PickleBallAPI.Controllers;
 using PickleBallAPI.Controllers.DTO;
 using PickleBallAPI.Models;
+using System;
 using System.Linq;
 
 namespace TestPickleBallApi
@@ -16,6 +18,8 @@ namespace TestPickleBallApi
         private DbContextOptions<VprContext> _vprOpt = null!;
         private IMapper _mapper = null!;
         private ILoggerFactory _loggerFactory = null!;
+        private TimeProvider time = null!;
+        private GameLogic gameLogic = null!;
 
         [TestInitialize]
         public void TestInit()
@@ -25,7 +29,10 @@ namespace TestPickleBallApi
             _vprOpt = new DbContextOptionsBuilder<VprContext>()
                 .UseSqlServer("Server=(localdb)\\ProjectModels;Database=vpr;Integrated Security=True;")
                 .Options;
-            _mapper = new Mapper(new MapperConfiguration(cfg => cfg.AddProfile<PickleBallProfile> (), _loggerFactory));
+            var mapperCfg = new MapperConfiguration(cfg => cfg.AddProfile<PickleBallProfile>(), _loggerFactory);
+            _mapper = mapperCfg.CreateMapper();
+            time = new FakeTimeProvider(DateTimeOffset.UtcNow);
+            gameLogic = new GameLogic(time, _loggerFactory.CreateLogger<GameLogic>());
 
         }
 
@@ -44,7 +51,7 @@ namespace TestPickleBallApi
             var log = _loggerFactory.CreateLogger<GamesController>();
             using var ctx = new VprContext(_vprOpt);
             // Act
-            var target = new GamesController(ctx,_mapper, log);
+            var target = new GamesController(ctx,_mapper, time, gameLogic, log);
             // Assert
             Assert.IsNotNull(target);
             ctx.Dispose();  //double dispose test; no exceptions!!
@@ -57,7 +64,7 @@ namespace TestPickleBallApi
             // Arrange
             var log = _loggerFactory.CreateLogger<GamesController>();
             using var ctx = new VprContext(_vprOpt);
-            var target = new GamesController(ctx, _mapper, log);
+            var target = new GamesController(ctx, _mapper, time, gameLogic, log);
             // Act
             var actual = target.GetGames().Result;
             // Assert
@@ -70,6 +77,8 @@ namespace TestPickleBallApi
             Assert.IsNotNull(gameDto);
             Assert.AreEqual(1, gameDto.First().GameId);
         }
+
+
         [TestMethod]
         [TestCategory("integration")]
         public void GetGameTest_ValueFound()
@@ -77,7 +86,7 @@ namespace TestPickleBallApi
             // Arrange
             var log = _loggerFactory.CreateLogger<GamesController>();
             using var ctx = new VprContext(_vprOpt);
-            var target = new GamesController(ctx, _mapper, log);
+            var target = new GamesController(ctx, _mapper, time, gameLogic, log);
             // Act
             var actual = target.GetGame(1).Result;
             // Assert
@@ -99,7 +108,7 @@ namespace TestPickleBallApi
             // Arrange
             var log = _loggerFactory.CreateLogger<GamesController>();
             using var ctx = new VprContext(_vprOpt);
-            var target = new GamesController(ctx, _mapper, log);
+            var target = new GamesController(ctx, _mapper, time, gameLogic, log);
             // Act
             var actual = target.GetGame(-1).Result;
             // Assert

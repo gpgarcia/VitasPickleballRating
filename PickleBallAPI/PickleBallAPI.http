@@ -1,6 +1,6 @@
 @PickleBallAPI_HostAddress = http://localhost:5186
 
-GET {{PickleBallAPI_HostAddress}}/weatherforecast/
+GET {{PickleBallAPI_HostAddress}}/swagger/index/
 Accept: application/json
 
 ###

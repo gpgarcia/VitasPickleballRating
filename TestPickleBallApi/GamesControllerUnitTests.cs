@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Time.Testing;
 using Microsoft.VisualStudio.TestPlatform.ObjectModel;
 using Moq;
 using PickleBallAPI;
@@ -24,6 +25,8 @@ namespace TestPickleBallApi
         private ILoggerFactory _loggerFactory = null!;
         private SqliteConnection _connection = null!;
         private ILogger<GamesControllerUnitTests> _testLog = null!;
+        private FakeTimeProvider time = null!;
+        private GameLogic gameLogic = null!;
 
         [TestInitialize]
         public void TestInit()
@@ -53,6 +56,8 @@ namespace TestPickleBallApi
 
             _mapper = new Mapper(new MapperConfiguration(cfg => cfg.AddProfile<PickleBallProfile>(), _loggerFactory));
 
+            time = new FakeTimeProvider(DateTimeOffset.UtcNow);
+            gameLogic = new GameLogic(time, _loggerFactory.CreateLogger<GameLogic>());
             using var setupCtx = new VprContext(_vprOpt);
             // Seed with a game and related data
             _testLog.LogTrace("Seeding test data TypeGame...");
@@ -65,18 +70,20 @@ namespace TestPickleBallApi
             var game = new Game
             {
                 GameId = 1,
-                PlayedDate = new DateTimeOffset(2025,9,15, 18,00,00, TimeSpan.FromHours(-4.0)),
                 TypeGameId = 1,
+                FacilityId = 1,
+                PlayedDate = new DateTimeOffset(2025, 9, 15, 18, 00, 00, TimeSpan.FromHours(-4.0)),
                 TeamOnePlayerOneId = 1,
                 TeamOnePlayerTwoId = 2,
                 TeamTwoPlayerOneId = 3,
                 TeamTwoPlayerTwoId = 4,
                 TeamOneScore = 11,
                 TeamTwoScore = 3,
-                GamePrediction = new GamePrediction
+                ChangedTime = new DateTimeOffset(2025, 9, 15, 18, 00, 00, TimeSpan.FromHours(-4.0)).ToUnixTimeMilliseconds(),
+                Prediction = new GamePrediction
                 {
                     GameId = 1,
-                    Game=null!,
+                    Game = null!,
                     T1p1rating = 200,
                     T1p2rating = 600,
                     T2p1rating = 300,
@@ -85,6 +92,8 @@ namespace TestPickleBallApi
                     ExpectT1score = 11,
                     ExpectT2score = 9,
                     CreatedAt = new DateTimeOffset(2025, 9, 15, 18, 00, 00, TimeSpan.FromHours(-4.0)),
+                    ChangedTime = new DateTimeOffset(2025, 9, 15, 18, 00, 00, TimeSpan.FromHours(-4.0)).ToUnixTimeMilliseconds(),
+
                 },
             };
             setupCtx.Games.Add(game);
@@ -98,6 +107,7 @@ namespace TestPickleBallApi
                 GameId = 1,
                 Rating = 200,
                 RatingDate = new DateTimeOffset(2025, 09, 01, 18, 0, 0, TimeSpan.FromHours(-4.0)),
+                ChangedTime = new DateTimeOffset(2025, 09, 01, 18, 0, 0, TimeSpan.FromHours(-4.0)).ToUnixTimeMilliseconds(),
 
             };
             var p2r = new PlayerRating
@@ -107,6 +117,7 @@ namespace TestPickleBallApi
                 GameId = 1, 
                 Rating = 600,
                 RatingDate = new DateTimeOffset(2025, 09, 01, 18, 0, 0, TimeSpan.FromHours(-4.0)),
+                ChangedTime = new DateTimeOffset(2025, 09, 01, 18, 0, 0, TimeSpan.FromHours(-4.0)).ToUnixTimeMilliseconds(),
 
             };
             var p3r = new PlayerRating
@@ -116,6 +127,7 @@ namespace TestPickleBallApi
                 GameId = 1,
                 Rating = 300,
                 RatingDate = new DateTimeOffset(2025, 09, 01, 18, 0, 0, TimeSpan.FromHours(-4.0)),
+                ChangedTime = new DateTimeOffset(2025, 09, 01, 18, 0, 0, TimeSpan.FromHours(-4.0)).ToUnixTimeMilliseconds(),
             };
             var p4r = new PlayerRating
             {
@@ -124,6 +136,7 @@ namespace TestPickleBallApi
                 GameId = 1,
                 Rating = 500,
                 RatingDate = new DateTimeOffset(2025, 09, 01, 18, 0, 0, TimeSpan.FromHours(-4.0)),
+                ChangedTime = new DateTimeOffset(2025, 09, 01, 18, 0, 0, TimeSpan.FromHours(-4.0)).ToUnixTimeMilliseconds(),
             };
             setupCtx.PlayerRatings.AddRange(p1r, p2r, p3r, p4r);
             setupCtx.SaveChanges();
@@ -146,7 +159,7 @@ namespace TestPickleBallApi
             using var ctx = new VprContext(_vprOpt);
 
             // Act
-            var target = new GamesController(ctx,_mapper,log);
+            var target = new GamesController(ctx,_mapper,time,gameLogic, log);
             // Assert
             Assert.IsNotNull(target);
             ctx.Dispose();  //double dispose test; no exceptions!!
@@ -159,7 +172,7 @@ namespace TestPickleBallApi
             // Arrange
             var log = _loggerFactory.CreateLogger<GamesController>();
             using var ctx = new VprContext(_vprOpt);
-            var target = new GamesController(ctx, _mapper, log);
+            var target = new GamesController(ctx, _mapper, time, gameLogic, log);
             // Act
             var actual = target.GetGames().Result;
             // Assert
@@ -181,7 +194,7 @@ namespace TestPickleBallApi
             // Arrange
             var log = _loggerFactory.CreateLogger<GamesController>();
             using var ctx = new VprContext(_vprOpt);
-            var target = new GamesController(ctx, _mapper, log);
+            var target = new GamesController(ctx, _mapper, time, gameLogic, log);
             // Act
             var actual = target.GetGame(1).Result;
             // Assert
@@ -193,7 +206,7 @@ namespace TestPickleBallApi
             var gameDto = result.Value as GameDto;
             Assert.IsNotNull(gameDto);
             Assert.AreEqual(1, gameDto.GameId);
-            var gamePredictionDto = gameDto.GamePrediction;
+            var gamePredictionDto = gameDto.Prediction;
             Assert.IsNotNull(gamePredictionDto);
             Assert.AreEqual(200, gamePredictionDto.T1p1rating);
             Assert.AreEqual(600, gamePredictionDto.T1p2rating);
@@ -212,7 +225,7 @@ namespace TestPickleBallApi
             // Arrange
             var log = _loggerFactory.CreateLogger<GamesController>();
             using var ctx = new VprContext(_vprOpt);
-            var target = new GamesController(ctx, _mapper, log);
+            var target = new GamesController(ctx, _mapper, time, gameLogic, log);
             // Act
             var actual = target.GetGame(-1).Result;
             // Assert
@@ -232,11 +245,11 @@ namespace TestPickleBallApi
             // Arrange
             var log = _loggerFactory.CreateLogger<GamesController>();
             using var ctx = new VprContext(_vprOpt);
-            var target = new GamesController(ctx, _mapper, log);
+            var target = new GamesController(ctx, _mapper, time, gameLogic, log);
             var newGameDto = new GameDto
             {
                 GameId = 2,
-                PlayedDate = DateTimeOffset.Now,
+                PlayedDate = time.GetLocalNow(),
                 TypeGameId = 1,
                 TeamOnePlayerOne = new PlayerDto(1),
                 TeamOnePlayerTwo = new PlayerDto(2),
@@ -258,10 +271,10 @@ namespace TestPickleBallApi
             Assert.AreEqual(newGameDto.PlayedDate, createdGameDto.PlayedDate);
             Assert.AreEqual(newGameDto.TeamOneScore, createdGameDto.TeamOneScore);
             Assert.AreEqual(newGameDto.TeamTwoScore, createdGameDto.TeamTwoScore);
-            Assert.AreEqual(newGameDto.TeamOnePlayerOne.PlayerId, createdGameDto.TeamOnePlayerOne.PlayerId);
-            Assert.AreEqual(newGameDto.TeamOnePlayerTwo.PlayerId, createdGameDto.TeamOnePlayerTwo.PlayerId);
-            Assert.AreEqual(newGameDto.TeamTwoPlayerOne.PlayerId, createdGameDto.TeamTwoPlayerOne.PlayerId);
-            Assert.AreEqual(newGameDto.TeamTwoPlayerTwo.PlayerId, createdGameDto.TeamTwoPlayerTwo.PlayerId);
+            Assert.AreEqual(newGameDto.TeamOnePlayerOne.PlayerId, createdGameDto.TeamOnePlayerOne?.PlayerId);
+            Assert.AreEqual(newGameDto.TeamOnePlayerTwo.PlayerId, createdGameDto.TeamOnePlayerTwo?.PlayerId);
+            Assert.AreEqual(newGameDto.TeamTwoPlayerOne.PlayerId, createdGameDto.TeamTwoPlayerOne?.PlayerId);
+            Assert.AreEqual(newGameDto.TeamTwoPlayerTwo.PlayerId, createdGameDto.TeamTwoPlayerTwo?.PlayerId);
             
             var gameInDb = ctx.Games
                 .Where(g => g.GameId == createdGameDto.GameId)
@@ -290,16 +303,16 @@ namespace TestPickleBallApi
             // Arrange
             var log = _loggerFactory.CreateLogger<GamesController>();
             using var ctx = new VprContext(_vprOpt);
-            var target = new GamesController(ctx, _mapper, log);
+            var target = new GamesController(ctx, _mapper, time, gameLogic, log);
             var newGameDto = new GameDto
             {
                 GameId = 2,
-                PlayedDate = DateTimeOffset.Now,
+                PlayedDate = time.GetLocalNow(),
                 TypeGameId = 1,
-                TeamOnePlayerOne = new PlayerDto(-1),
-                TeamOnePlayerTwo = new PlayerDto(2),
-                TeamTwoPlayerOne = new PlayerDto(3),
-                TeamTwoPlayerTwo = new PlayerDto(4),
+                TeamOnePlayerOne = new PlayerDto(-1, ChangedTime: 1759249672001),
+                TeamOnePlayerTwo = new PlayerDto(2, ChangedTime: 1759249672002),
+                TeamTwoPlayerOne = new PlayerDto(3, ChangedTime: 1759249672003),
+                TeamTwoPlayerTwo = new PlayerDto(4, ChangedTime: 1759249672004),
                 TeamOneScore = 11,
                 TeamTwoScore = 8
             };
@@ -325,7 +338,7 @@ namespace TestPickleBallApi
             // Arrange
             var log = _loggerFactory.CreateLogger<GamesController>();
             using var ctx = new VprContext(_vprOpt);
-            var target = new GamesController(ctx, _mapper, log);
+            var target = new GamesController(ctx, _mapper, time, gameLogic, log);
             var newGameDto = new GameDto
             {
                 GameId = 2,
@@ -335,7 +348,10 @@ namespace TestPickleBallApi
                 TeamTwoPlayerOne = new PlayerDto(3),
                 TeamTwoPlayerTwo = new PlayerDto(4),
                 // without scores or date to simulate pre-game
+                ChangedTime = time.GetUtcNow().ToUnixTimeMilliseconds(),
             };
+            time.Advance(TimeSpan.FromSeconds(10.0));
+
             // Act
             var actual = target.PostGame(newGameDto).Result;
             // Assert
@@ -348,10 +364,10 @@ namespace TestPickleBallApi
             Assert.IsNotNull(createdGameDto);
             Assert.AreEqual(newGameDto.TeamOneScore, createdGameDto.TeamOneScore);
             Assert.AreEqual(newGameDto.TeamTwoScore, createdGameDto.TeamTwoScore);
-            Assert.AreEqual(newGameDto.TeamOnePlayerOne.PlayerId, createdGameDto.TeamOnePlayerOne.PlayerId);
-            Assert.AreEqual(newGameDto.TeamOnePlayerTwo.PlayerId, createdGameDto.TeamOnePlayerTwo.PlayerId);
-            Assert.AreEqual(newGameDto.TeamTwoPlayerOne.PlayerId, createdGameDto.TeamTwoPlayerOne.PlayerId);
-            Assert.AreEqual(newGameDto.TeamTwoPlayerTwo.PlayerId, createdGameDto.TeamTwoPlayerTwo.PlayerId);
+            Assert.AreEqual(newGameDto.TeamOnePlayerOne.PlayerId, createdGameDto.TeamOnePlayerOne?.PlayerId);
+            Assert.AreEqual(newGameDto.TeamOnePlayerTwo.PlayerId, createdGameDto.TeamOnePlayerTwo?.PlayerId);
+            Assert.AreEqual(newGameDto.TeamTwoPlayerOne.PlayerId, createdGameDto.TeamTwoPlayerOne?.PlayerId);
+            Assert.AreEqual(newGameDto.TeamTwoPlayerTwo?.PlayerId, createdGameDto.TeamTwoPlayerTwo?.PlayerId);
 
             var gameInDb = ctx.Games
                 .Where(g => g.GameId == createdGameDto.GameId)
@@ -359,22 +375,22 @@ namespace TestPickleBallApi
                 .Include(g => g.TeamOnePlayerTwo)
                 .Include(g => g.TeamTwoPlayerOne)
                 .Include(g => g.TeamTwoPlayerTwo)
-                .Include(g => g.GamePrediction)
+                .Include(g => g.Prediction)
                 .FirstOrDefault();
             Assert.IsNotNull(gameInDb);
             Assert.AreEqual(newGameDto.TeamOneScore, gameInDb.TeamOneScore);
             Assert.AreEqual(newGameDto.TeamTwoScore, gameInDb.TeamTwoScore);
             Assert.AreEqual(newGameDto.TeamOnePlayerOne.PlayerId, gameInDb.TeamOnePlayerOneId);
-            Assert.AreEqual(newGameDto.TeamOnePlayerTwo.PlayerId, gameInDb.TeamOnePlayerTwoId);
+            Assert.AreEqual(newGameDto.TeamOnePlayerTwo?.PlayerId, gameInDb.TeamOnePlayerTwoId);
             Assert.AreEqual(newGameDto.TeamTwoPlayerOne.PlayerId, gameInDb.TeamTwoPlayerOneId);
-            Assert.AreEqual(newGameDto.TeamTwoPlayerTwo.PlayerId, gameInDb.TeamTwoPlayerTwoId);
-            var predictionInDb = gameInDb.GamePrediction;
+            Assert.AreEqual(newGameDto.TeamTwoPlayerTwo?.PlayerId, gameInDb.TeamTwoPlayerTwoId);
+            var predictionInDb = gameInDb.Prediction;
             Assert.IsNotNull(predictionInDb);
             Assert.AreEqual(200, predictionInDb.T1p1rating);
             Assert.AreEqual(600, predictionInDb.T1p2rating);
             Assert.AreEqual(300, predictionInDb.T2p1rating);
             Assert.AreEqual(500, predictionInDb.T2p2rating);    
-            Assert.IsTrue(predictionInDb.CreatedAt.Date.Equals(DateTimeOffset.Now.Date));
+            Assert.AreEqual(time.GetLocalNow().Date, predictionInDb.CreatedAt.Date);
             Assert.IsGreaterThan(0.0m, predictionInDb.T1predictedWinProb);
             Assert.IsLessThanOrEqualTo(1.0m, predictionInDb.T1predictedWinProb);
 
@@ -390,8 +406,7 @@ namespace TestPickleBallApi
             _testLog.LogTrace("Starting PutGameTest_ValidData");
             // Arrange
             var log = _loggerFactory.CreateLogger<GamesController>();
-            using var ctx = new VprContext(_vprOpt);
-            var target = new GamesController(ctx, _mapper, log);
+
             var newGameDto = new GameDto
             {
                 GameId = 4,
@@ -403,12 +418,12 @@ namespace TestPickleBallApi
                 TeamTwoPlayerTwo = new PlayerDto(4),
                 // without scores or date to simulate pre-game update
             };
+
+            // first create the game to be updated
+            using (var setupCtx = new VprContext(_vprOpt))
             {
-                using var setupCtx = new VprContext(_vprOpt);
-                var setup = new GamesController(setupCtx, _mapper, log);
-                // first create the game to be updated
-                var postResult = target.PostGame(newGameDto).Result;
-                // confirm created
+                var setup = new GamesController(setupCtx, _mapper, time, gameLogic, log);
+                var postResult = setup.PostGame(newGameDto).Result;
                 Assert.IsNotNull(postResult);
                 Assert.IsInstanceOfType<CreatedAtActionResult>(postResult.Result);
                 var postCreatedResult = postResult.Result as CreatedAtActionResult;
@@ -416,31 +431,38 @@ namespace TestPickleBallApi
                 Assert.AreEqual(201, postCreatedResult.StatusCode);
             }
 
+            time.Advance(TimeSpan.FromSeconds(1));
             // now update with scores and date after game played
             GameDto updatedNewGameDto = newGameDto with
             {
-                PlayedDate = DateTimeOffset.Now.AddDays(-1),
+                PlayedDate = time.GetLocalNow(),
                 TeamOneScore = 11,
-                TeamTwoScore = 9
-
+                TeamTwoScore = 9,
+                ChangedTime = time.GetLocalNow().ToUnixTimeMilliseconds(),
             };
-            _testLog.LogTrace("PutGameTest_ValidData Initialization Complete");
+            time.Advance(TimeSpan.FromSeconds(1));
             _testLog.LogTrace("PutGameTest_ValidData end arrangement");
 
             // Act
-            var actual = target.PutGame(4, updatedNewGameDto).Result;
+            IActionResult actual;
+            using (var ctx = new VprContext(_vprOpt))
+            {
+                var target = new GamesController(ctx, _mapper, time, gameLogic, log);
+                actual = target.PutGame(4, updatedNewGameDto).Result;
+            }
 
             // Assert
             Assert.IsNotNull(actual);
             Assert.IsInstanceOfType<NoContentResult>(actual);
 
-            var gameInDb = ctx.Games
+            using var verifyCtx = new VprContext(_vprOpt);
+            var gameInDb = verifyCtx.Games
                 .Where(g => g.GameId == newGameDto.GameId)
                 .Include(g => g.TeamOnePlayerOne)
                 .Include(g => g.TeamOnePlayerTwo)
                 .Include(g => g.TeamTwoPlayerOne)
                 .Include(g => g.TeamTwoPlayerTwo)
-                .Include(g=> g.GamePrediction)
+                .Include(g=> g.Prediction)
                 .FirstOrDefault();
             Assert.IsNotNull(gameInDb);
             Assert.IsNotNull(gameInDb.PlayedDate);
@@ -462,7 +484,7 @@ namespace TestPickleBallApi
             // Arrange
             var log = _loggerFactory.CreateLogger<GamesController>();
             using var ctx = new VprContext(_vprOpt);
-            var target = new GamesController(ctx, _mapper, log);
+            var target = new GamesController(ctx, _mapper, time, gameLogic, log);
             var newGameDto = new GameDto
             {
                 GameId = 1,
@@ -476,7 +498,8 @@ namespace TestPickleBallApi
             Assert.IsInstanceOfType<BadRequestObjectResult>(actual);
             var result = actual as BadRequestObjectResult;
             Assert.IsNotNull(result);
-            Assert.Contains("Id does not match", result.Value as string);
+            Assert.IsNotNull(result.Value);
+            Assert.Contains("Id does not match", (string)(result.Value));
         }
 
         [TestMethod]
@@ -487,11 +510,11 @@ namespace TestPickleBallApi
             // Arrange
             var log = _loggerFactory.CreateLogger<GamesController>();
             using var ctx = new VprContext(_vprOpt);
-            var target = new GamesController(ctx, _mapper, log);
+            var target = new GamesController(ctx, _mapper, time, gameLogic, log);
             var newGameDto = new GameDto
             {
                 GameId = 1,
-                PlayedDate = DateTimeOffset.Now,
+                PlayedDate = time.GetLocalNow(),
                 TypeGameId = 1,
                 TeamOnePlayerOne =null!,
                 TeamOnePlayerTwo = new PlayerDto(2),
@@ -509,7 +532,8 @@ namespace TestPickleBallApi
             Assert.IsInstanceOfType<BadRequestObjectResult>(actual);
             var result = actual as BadRequestObjectResult;
             Assert.IsNotNull(result);
-            Assert.Contains("Player One can not be NULL", result.Value as string);
+            Assert.IsNotNull(result.Value);
+            Assert.Contains("Player One can not be NULL", (string)(result.Value));
         }
 
         [TestMethod]
@@ -520,11 +544,11 @@ namespace TestPickleBallApi
             // Arrange
             var log = _loggerFactory.CreateLogger<GamesController>();
             using var ctx = new VprContext(_vprOpt);
-            var target = new GamesController(ctx, _mapper, log);
+            var target = new GamesController(ctx, _mapper, time, gameLogic, log);
             var newGameDto = new GameDto
             {
                 GameId = 1,
-                PlayedDate = DateTimeOffset.Now,
+                PlayedDate = time.GetLocalNow(),
                 TypeGameId = 1,
                 Facility = new FacilityDto { FacilityId = 1,},
                 TeamOnePlayerOne = new PlayerDto(-1),   //    <== invalid player
@@ -543,7 +567,8 @@ namespace TestPickleBallApi
             Assert.IsInstanceOfType<BadRequestObjectResult>(actual);
             var result = actual as BadRequestObjectResult;
             Assert.IsNotNull(result);
-            Assert.Contains("does not exist", result.Value as string);
+            Assert.IsNotNull(result.Value);
+            Assert.Contains("does not exist", (string)(result.Value));
         }
 
         [TestMethod]
@@ -554,7 +579,7 @@ namespace TestPickleBallApi
             // Arrange
             var log = _loggerFactory.CreateLogger<GamesController>();
             using var ctx = new VprContext(_vprOpt);
-            var target = new GamesController(ctx, _mapper, log);
+            var target = new GamesController(ctx, _mapper, time, gameLogic, log);
             var newGameDto = new GameDto
             {
                 GameId = 4,
@@ -588,7 +613,7 @@ namespace TestPickleBallApi
             // Arrange
             var log = _loggerFactory.CreateLogger<GamesController>();
             using var ctx = new VprContext(_vprOpt);
-            var target = new GamesController(ctx, _mapper, log);
+            var target = new GamesController(ctx, _mapper, time, gameLogic, log);
             var gamePlayedDate = DateTimeOffset.Now.AddDays(-1);
             var newGameDto = new GameDto
             {
@@ -604,7 +629,7 @@ namespace TestPickleBallApi
             };
             {
                 using var setupCtx = new VprContext(_vprOpt);
-                var setup = new GamesController(setupCtx, _mapper, log);
+                var setup = new GamesController(setupCtx, _mapper, time, gameLogic, log);
                 // first create the game to be updated
                 var game = _mapper.Map<Game>(newGameDto);
                 setupCtx.Games.Add(game);
@@ -625,7 +650,7 @@ namespace TestPickleBallApi
                 .Include(g => g.TeamOnePlayerTwo)
                 .Include(g => g.TeamTwoPlayerOne)
                 .Include(g => g.TeamTwoPlayerTwo)
-                .Include(g => g.GamePrediction)
+                .Include(g => g.Prediction)
                 .FirstOrDefault();
             Assert.IsNotNull(gameInDb);
             Assert.IsNotNull(gameInDb.PlayedDate);
@@ -653,14 +678,14 @@ namespace TestPickleBallApi
             // Arrange
             var log = _loggerFactory.CreateLogger<GamesController>();
             using var ctx = new VprContext(_vprOpt);
-            var target = new GamesController(ctx, _mapper, log);
-            var gamePlayedDate = DateTimeOffset.Now.AddDays(-1);
+            var target = new GamesController(ctx, _mapper, time, gameLogic, log);
+            var gamePlayedDate = time.GetLocalNow().AddDays(-1);
             var pr = new List<PlayerRating>
             {
-                new() { PlayerId = 1, Rating = 257, RatingDate = gamePlayedDate.AddDays(-2), GameId = 2,  ChangedTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()},
-                new() { PlayerId = 2, Rating = 237, RatingDate = gamePlayedDate.AddDays(-3), GameId = 2,  ChangedTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()},
-                new() { PlayerId = 3, Rating = 263, RatingDate = gamePlayedDate.AddDays(-4), GameId = 2,  ChangedTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()},
-                new() { PlayerId = 4, Rating = 250, RatingDate = gamePlayedDate.AddDays(-5), GameId = 2,  ChangedTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()},
+                new() { PlayerId = 1, Rating = 257, RatingDate = gamePlayedDate.AddDays(-2), GameId = 2},
+                new() { PlayerId = 2, Rating = 237, RatingDate = gamePlayedDate.AddDays(-3), GameId = 2},
+                new() { PlayerId = 3, Rating = 263, RatingDate = gamePlayedDate.AddDays(-4), GameId = 2},
+                new() { PlayerId = 4, Rating = 250, RatingDate = gamePlayedDate.AddDays(-5), GameId = 2},
 
             };
             var game2 = new Game
@@ -671,9 +696,10 @@ namespace TestPickleBallApi
                 TeamOnePlayerTwoId = 2,
                 TeamTwoPlayerOneId = 3,
                 TeamTwoPlayerTwoId = 4,
-                ChangedTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
+                ChangedTime = time.GetUtcNow().ToUnixTimeMilliseconds()
 
             };
+            time.Advance(TimeSpan.FromSeconds(1));
             var newGameDto = new GameDto
             {
                 GameId = 3,
@@ -686,11 +712,12 @@ namespace TestPickleBallApi
                 PlayedDate = gamePlayedDate,
                 TeamOneScore = 11,
                 TeamTwoScore = 5,
+                ChangedTime = time.GetLocalNow().ToUnixTimeMilliseconds(),
 
             };
             {
                 using var setupCtx = new VprContext(_vprOpt);
-                var setup = new GamesController(setupCtx, _mapper, log);
+                var setup = new GamesController(setupCtx, _mapper, time, gameLogic, log);
                 // first create the game to be updated
                 var game3 = _mapper.Map<Game>(newGameDto);
                 setupCtx.Games.Add(game2);
@@ -699,6 +726,14 @@ namespace TestPickleBallApi
                 setupCtx.SaveChanges();
             }
             _testLog.LogTrace("PutGameUpdateTest_PredictTeam2Wins Initialization Complete");
+            time.Advance(TimeSpan.FromSeconds(1));
+
+            var updateGameDto = newGameDto with
+            {
+                TeamOneScore = 6,
+                TeamTwoScore = 11,
+                ChangedTime = time.GetLocalNow().ToUnixTimeMilliseconds(),
+            };  
 
             // Act
             var actual = target.PutGameUpdate(3).Result;
@@ -713,7 +748,7 @@ namespace TestPickleBallApi
                 .Include(g => g.TeamOnePlayerTwo)
                 .Include(g => g.TeamTwoPlayerOne)
                 .Include(g => g.TeamTwoPlayerTwo)
-                .Include(g => g.GamePrediction)
+                .Include(g => g.Prediction)
                 .FirstOrDefault();
             Assert.IsNotNull(gameInDb);
             Assert.IsNotNull(gameInDb.PlayedDate);
@@ -724,10 +759,11 @@ namespace TestPickleBallApi
             Assert.AreEqual(newGameDto.TeamOnePlayerTwo.PlayerId, gameInDb.TeamOnePlayerTwoId);
             Assert.AreEqual(newGameDto.TeamTwoPlayerOne.PlayerId, gameInDb.TeamTwoPlayerOneId);
             Assert.AreEqual(newGameDto.TeamTwoPlayerTwo.PlayerId, gameInDb.TeamTwoPlayerTwoId);
-            Assert.IsNotNull(gameInDb.GamePrediction);
-            Assert.IsLessThan(0.5m, gameInDb.GamePrediction.T1predictedWinProb);
-            Assert.AreEqual(11, gameInDb.GamePrediction.ExpectT2score);
-            Assert.AreEqual(6, gameInDb.GamePrediction.ExpectT1score);
+            Assert.IsNotNull(gameInDb.Prediction);
+            Assert.IsLessThan(0.5m, gameInDb.Prediction.T1predictedWinProb);
+            Assert.AreEqual(11, gameInDb.Prediction.ExpectT2score);
+            Assert.AreEqual(6, gameInDb.Prediction.ExpectT1score);
+
             var playerRatingsInDb = ctx.PlayerRatings
                 .Where(pr => pr.GameId == newGameDto.GameId)
                 .ToList();
@@ -745,7 +781,7 @@ namespace TestPickleBallApi
             // Arrange
             var log = _loggerFactory.CreateLogger<GamesController>();
             using var ctx = new VprContext(_vprOpt);
-            var target = new GamesController(ctx, _mapper, log);
+            var target = new GamesController(ctx, _mapper, time, gameLogic, log);
             var gamePlayedDate = DateTimeOffset.Now.AddDays(-1);
             // game not present
             _testLog.LogTrace("PutGameUpdateTest_ValidData Initialization Complete");
@@ -766,7 +802,7 @@ namespace TestPickleBallApi
             // Arrange
             var log = _loggerFactory.CreateLogger<GamesController>();
             using var ctx = new VprContext(_vprOpt);
-            var target = new GamesController(ctx, _mapper, log);
+            var target = new GamesController(ctx, _mapper, time, gameLogic, log);
             var gamePlayedDate = DateTimeOffset.Now.AddDays(-1);
             _testLog.LogTrace("PutGameUpdateTest_All Initialization Complete");
 
@@ -785,7 +821,7 @@ namespace TestPickleBallApi
             // Arrange
             var log = _loggerFactory.CreateLogger<GamesController>();
             using var ctx = new VprContext(_vprOpt);
-            var target = new GamesController(ctx, _mapper, log);
+            var target = new GamesController(ctx, _mapper, time, gameLogic, log);
 
             // Act
             var actionResult = target.ExportRawGamesCsv().Result;
@@ -801,7 +837,7 @@ namespace TestPickleBallApi
             // header should include the anonymous property names used when writing CSV
             Assert.Contains("GameId,FacilityId,PlayedDate,TypeGameId,TeamOnePlayerOneId,TeamOnePlayerTwoId,TeamOneScore,TeamTwoPlayerOneId,TeamTwoPlayerTwoId,TeamTwoScore,ChangedTime", content);
             // seeded game id expected in CSV body
-            Assert.Contains("1,,2025-09-15T18:00:00.0000000-04:00,1,1,2,11,3,4,3,0", content);
+            Assert.Contains("1,1,2025-09-15T18:00:00.0000000-04:00,1,1,2,11,3,4,3,1757973600000", content);
             // verrify filename format
             Assert.IsFalse(string.IsNullOrWhiteSpace(fileResult.FileDownloadName));
             Assert.StartsWith("games_raw_", fileResult.FileDownloadName);
@@ -827,7 +863,7 @@ namespace TestPickleBallApi
             ctx.Games.RemoveRange(ctx.Games);
             ctx.SaveChanges();
 
-            var target = new GamesController(ctx, _mapper, log);
+            var target = new GamesController(ctx, _mapper, time, gameLogic, log);
 
             // Act
             var actionResult = target.ExportRawGamesCsv().Result;
@@ -856,7 +892,7 @@ namespace TestPickleBallApi
             var mockCtx = new Mock<VprContext>(_vprOpt) { CallBase = false };
             mockCtx.SetupGet(c => c.Games).Throws(new DbUpdateException("Concurrency exception"));
 
-            var target = new GamesController(mockCtx.Object, _mapper, log);
+            var target = new GamesController(mockCtx.Object, _mapper, time, gameLogic, log);
 
             // Act
             var actionResult = Assert.ThrowsAsync<DbUpdateException>(()=>target.ExportRawGamesCsv()).Result;

@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Time.Testing;
 using PickleBallAPI;
 using PickleBallAPI.Controllers;
 using PickleBallAPI.Controllers.DTO;
@@ -20,6 +21,7 @@ namespace TestPickleBallApi
         private IMapper _mapper = null!;
         private ILoggerFactory _loggerFactory = null!;
         SqliteConnection _connection = null!;
+        private TimeProvider time = null!;
 
         [TestInitialize]
         public void TestInit()
@@ -48,7 +50,7 @@ namespace TestPickleBallApi
             ctx.Database.EnsureCreated();
 
             _mapper = new Mapper(new MapperConfiguration(cfg => cfg.AddProfile<PickleBallProfile> (), _loggerFactory));
-
+            time = new FakeTimeProvider();
             using var setupCtx = new VprContext(_vprOpt);
             TestHelper.SetupLookupData(setupCtx);
             TestHelper.SetupPlayerData(setupCtx);
@@ -82,7 +84,7 @@ namespace TestPickleBallApi
             // Arrange
             using var ctx = new VprContext(_vprOpt);
             // Act
-            var target = new PlayerRatingsController(ctx,_mapper);
+            var target = new PlayerRatingsController(ctx,_mapper, time);
             // Assert
             Assert.IsNotNull(target);
             ctx.Dispose();  //double dispose test; no exceptions!!
@@ -94,7 +96,7 @@ namespace TestPickleBallApi
         {
             // Arrange
             using var ctx = new VprContext(_vprOpt);
-            var target = new PlayerRatingsController(ctx, _mapper);
+            var target = new PlayerRatingsController(ctx, _mapper, time);
             // Act
             var actual = target.GetPlayerRatings().Result;
             // Assert
@@ -114,7 +116,7 @@ namespace TestPickleBallApi
         {
             // Arrange
             using var ctx = new VprContext(_vprOpt);
-            var target = new PlayerRatingsController(ctx, _mapper);
+            var target = new PlayerRatingsController(ctx, _mapper, time);
             // Act
             var actual = target.GetPlayerRating(1).Result;
             // Assert
@@ -131,7 +133,7 @@ namespace TestPickleBallApi
         {
             // Arrange
             using var ctx = new VprContext(_vprOpt);
-            var target = new PlayerRatingsController(ctx, _mapper);
+            var target = new PlayerRatingsController(ctx, _mapper, time);
             // Act
             var actual = target.GetPlayerRating(-1).Result;
             // Assert
@@ -157,7 +159,7 @@ namespace TestPickleBallApi
                 RatingDate = DateTimeOffset.Now,
                 GameId = 2
             };
-            var target = new PlayerRatingsController(ctx, _mapper);
+            var target = new PlayerRatingsController(ctx, _mapper, time);
             // Act
             var actual = target.PostPlayerRating(prDto).Result;
             // Assert
@@ -174,7 +176,7 @@ namespace TestPickleBallApi
             var a = ctx.PlayerRatings.FirstOrDefault(p => p.PlayerRatingId == 2);
             Assert.IsNotNull(a);
             Assert.AreEqual(prDto.Rating, a.Rating);
-            Assert.AreEqual(prDto.RatingDate.Date, a.RatingDate.Date);
+            Assert.AreEqual(prDto.RatingDate?.Date, a.RatingDate.Date);
 
         }
 
@@ -184,7 +186,7 @@ namespace TestPickleBallApi
         {
             // Arrange
             using var ctx = new VprContext(_vprOpt);
-            var target = new PlayerRatingsController(ctx, _mapper);
+            var target = new PlayerRatingsController(ctx, _mapper, time);
             // Act
             var actual = target.DeletePlayerRating(1).Result;
             // Assert
@@ -198,7 +200,7 @@ namespace TestPickleBallApi
         {
             // Arrange
             using var ctx = new VprContext(_vprOpt);
-            var target = new PlayerRatingsController(ctx, _mapper);
+            var target = new PlayerRatingsController(ctx, _mapper, time);
             // Act
             var actual = target.DeletePlayerRating(-11).Result;
             // Assert
@@ -213,7 +215,7 @@ namespace TestPickleBallApi
         {
             // Arrange
             using var ctx = new VprContext(_vprOpt);
-            var target = new PlayerRatingsController(ctx, _mapper);
+            var target = new PlayerRatingsController(ctx, _mapper, time);
             PlayerRatingDto prDto = new()
             {
                 PlayerRatingId = 1,
@@ -230,7 +232,7 @@ namespace TestPickleBallApi
             var a = ctx.PlayerRatings.FirstOrDefault(p => p.PlayerRatingId == 1);
             Assert.IsNotNull(a);
             Assert.AreEqual(prDto.Rating, a.Rating);
-            Assert.AreEqual(prDto.RatingDate.Date, a.RatingDate.Date);
+            Assert.AreEqual(prDto.RatingDate?.Date, a.RatingDate.Date);
         }
 
         [TestMethod]
@@ -239,7 +241,7 @@ namespace TestPickleBallApi
         {
             // Arrange
             using var ctx = new VprContext(_vprOpt);
-            var target = new PlayerRatingsController(ctx, _mapper);
+            var target = new PlayerRatingsController(ctx, _mapper, time);
             PlayerRatingDto prDto = new()
             {
                 PlayerRatingId = 1,
@@ -260,7 +262,7 @@ namespace TestPickleBallApi
         {
             // Arrange
             using var ctx = new VprContext(_vprOpt);
-            var target = new PlayerRatingsController(ctx, _mapper);
+            var target = new PlayerRatingsController(ctx, _mapper, time);
             PlayerRatingDto prDto = new()
             {
                 PlayerRatingId = -1,

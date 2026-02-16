@@ -13,6 +13,11 @@ public static class GameQueries
         return context.Games.Any(e => e.GameId == id);
     }
 
+    public static Task<bool> GameExistsAsync(this VprContext context, int id)
+    {
+        return context.Games.AnyAsync(e => e.GameId == id);
+    }
+
     public static async Task<IEnumerable<Game>> GetAllGamesRawAsync(this VprContext context)
     {
         var tmp = await context
@@ -25,6 +30,7 @@ public static class GameQueries
     {
         var tmp = await context
             .Games
+            .AsNoTracking()
             .Include(g => g.TypeGame)
             .Include(g => g.TeamOnePlayerOne)
             .Include(g => g.TeamOnePlayerTwo)
@@ -45,7 +51,7 @@ public static class GameQueries
             .Include(g => g.TeamOnePlayerTwo)
             .Include(g => g.TeamTwoPlayerOne)
             .Include(g => g.TeamTwoPlayerTwo)
-            .Include(g => g.GamePrediction)
+            .Include(g => g.Prediction)
             .Include(g => g.Facility)
             .Include(g => g.Facility!.TypeFacility)
             .FirstOrDefaultAsync(g => g.GameId == id)

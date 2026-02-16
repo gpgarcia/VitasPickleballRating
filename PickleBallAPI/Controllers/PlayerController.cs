@@ -17,7 +17,7 @@ namespace PickleBallAPI.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class PlayerController(VprContext context, IMapper mapper, ILogger<PlayerController> logger) : ControllerBase
+    public class PlayerController(VprContext context, IMapper mapper, TimeProvider time, ILogger<PlayerController> logger) : ControllerBase
     {
 
         // GET: api/Player
@@ -86,7 +86,7 @@ namespace PickleBallAPI.Controllers
             var records = mapper.Map<List<PlayerRawDto>>(games);
             var bytes = await GenerateCsvFileAsync(records);
             // filename of exported file with timestamp
-            var fileName = $"player_raw_{DateTime.UtcNow:yyyyMMddHHmmss}.csv";
+            var fileName = $"player_raw_{time.GetLocalNow():yyyyMMddHHmmss}.csv";
             return File(bytes!, "text/csv; charset=utf-8", fileName);
         }
 
@@ -183,7 +183,7 @@ namespace PickleBallAPI.Controllers
                 }
                 else
                 {
-                    throw;
+                    return Conflict("The player was modified by another process. Please refresh and try again.");
                 }
             }
 
@@ -207,6 +207,7 @@ namespace PickleBallAPI.Controllers
         public async Task<ActionResult<Player>> PostPlayer(PlayerDto playerDto)
         {
             var player = mapper.Map<Player>(playerDto);
+            player.ChangedTime= time.GetUtcNow().ToUnixTimeMilliseconds();
             context.Players.Add(player);
             await context.SaveChangesAsync();
 

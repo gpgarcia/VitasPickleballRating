@@ -17,5 +17,7 @@ public partial class PlayerRating
 
     public long ChangedTime { get; set; }
 
+    public virtual Game Game { get; set; } = null!;
+
     public virtual Player Player { get; set; } = null!;
 }

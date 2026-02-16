@@ -20,7 +20,8 @@ namespace PickleBallAPI.Controllers.DTO;
 /// <param name="TeamTwoPlayerOne">Player DTO for team two, player one.</param>
 /// <param name="TeamTwoPlayerTwo">Player DTO for team two, player two.</param>
 /// <param name="TypeGame">Lightweight type-game metadata.</param>
-/// <param name="GamePrediction">Optional prediction metadata for the game.</param>
+/// <param name="Prediction">Optional prediction metadata for the game.</param>
+/// <param name="ChangedTime">Concurrency token</param>
 public sealed record GameDto(
     int? GameId = null,
     DateTimeOffset? PlayedDate = null,
@@ -33,5 +34,6 @@ public sealed record GameDto(
     PlayerDto? TeamTwoPlayerOne = null,
     PlayerDto? TeamTwoPlayerTwo = null,
     TypeGameDto? TypeGame = null,
-    GamePredictionDto? GamePrediction = null
+    GamePredictionDto? Prediction = null,
+    long ChangedTime =0
 );

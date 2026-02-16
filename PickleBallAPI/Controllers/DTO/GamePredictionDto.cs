@@ -17,7 +17,8 @@ namespace PickleBallAPI.Controllers.DTO;
 /// <param name="T1predictedWinProb">Predicted win probability for Team 1 (0.0 - 1.0).</param>
 /// <param name="ExpectT1score">Expected score for Team 1 (nullable).</param>
 /// <param name="ExpectT2score">Expected score for Team 2 (nullable).</param>
-/// <param name="CreatedAt">Concurrency token.</param>
+/// <param name="CreatedAt">When rating was created</param>
+/// <param name="ChangedTime">Concurrency token</param>
 public sealed record GamePredictionDto(
     int T1p1rating,
     int T1p2rating,
@@ -26,5 +27,6 @@ public sealed record GamePredictionDto(
     decimal T1predictedWinProb,
     int? ExpectT1score,
     int? ExpectT2score,
-    long CreatedAt
+    DateTimeOffset CreatedAt,
+    long ChangedTime
 );

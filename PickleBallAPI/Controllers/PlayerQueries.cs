@@ -76,9 +76,14 @@ namespace PickleBallAPI.Controllers
             return rating;
         }
 
-        public static bool PlayerExists(this VprContext context, int id)
+        public static bool PlayerExists(this VprContext context, int? id)
         {
-            return context.Players.Any(e => e.PlayerId == id);
+            var tmp = false;
+            if ( id != null && id != 0)
+            {
+                   tmp = context.Players.Any(e => e.PlayerId == id);
+            }
+            return tmp;
         }
 
     }

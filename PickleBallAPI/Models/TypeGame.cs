@@ -11,4 +11,5 @@ public partial class TypeGame
 
     public long ChangedTime { get; set; }
 
+    public virtual ICollection<Game> Games { get; set; } = new List<Game>();
 }

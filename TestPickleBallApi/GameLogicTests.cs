@@ -1,11 +1,14 @@
 ﻿using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Time.Testing;
 using PickleBallAPI.Controllers;
 using PickleBallAPI.Controllers.DTO;
 using PickleBallAPI.Models;
 using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace TestPickleBallApi
 {
@@ -15,9 +18,13 @@ namespace TestPickleBallApi
         SqliteConnection _connection = null!;
         private VprContext _ctx = null!;
         private ILoggerFactory _loggerFactory = null!;
+        TimeProvider time = null!;
+        GameLogic target = null!;
+
         [TestInitialize]
         public void Setup()
         {
+
             // This method is called before each test method.
             _loggerFactory = LoggerFactory.Create(builder =>
             {
@@ -36,6 +43,9 @@ namespace TestPickleBallApi
             _connection.Open();
             _ctx = new VprContext(vprOpt);
             _ctx.Database.EnsureCreated();
+
+            time = new FakeTimeProvider(DateTimeOffset.UtcNow);
+            target = new GameLogic(time, _loggerFactory.CreateLogger<GameLogic>());
 
 
             // Seed ctx with test data
@@ -78,12 +88,13 @@ namespace TestPickleBallApi
             setupCtx.Games.AddRange(games);
             var playerRatings = new List<PlayerRating>
             {
-                new () { PlayerId = 2, GameId =1, Rating = 300, RatingDate = DateTimeOffset.Now.AddDays(-8), ChangedTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() },
-                new () { PlayerId = 3, GameId =2, Rating = 400, RatingDate = DateTimeOffset.Now.AddDays(-6), ChangedTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() },
-                new () { PlayerId = 4, GameId =3, Rating = 500, RatingDate = DateTimeOffset.Now.AddDays(-4), ChangedTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() },
+                new () { PlayerId = 2, GameId =1, Rating = 300, RatingDate = time.GetLocalNow().AddDays(-8), ChangedTime = time.GetUtcNow().ToUnixTimeMilliseconds() },
+                new () { PlayerId = 3, GameId =2, Rating = 400, RatingDate = time.GetLocalNow().AddDays(-6), ChangedTime = time.GetUtcNow().ToUnixTimeMilliseconds() },
+                new () { PlayerId = 4, GameId =3, Rating = 500, RatingDate = time.GetLocalNow().AddDays(-4), ChangedTime = time.GetUtcNow().ToUnixTimeMilliseconds() },
             };
             setupCtx.PlayerRatings.AddRange(playerRatings);
             setupCtx.SaveChanges();
+
 
         }
 
@@ -95,6 +106,15 @@ namespace TestPickleBallApi
             _connection.Close();
         }
 
+        [TestMethod]
+        public void GameLogic_Ctor_test()
+        {
+            TimeProvider time = new FakeTimeProvider();
+            //act
+            var target = new GameLogic(time, _loggerFactory.CreateLogger<GameLogic>());
+            //assert
+            Assert.IsNotNull(target);
+        }
 
         [TestMethod]
         [DataRow(0.7563, 11, 4)]
@@ -106,7 +126,7 @@ namespace TestPickleBallApi
         [DataRow(0.500, 15, 14)]
         public void CalculateExpectedScoreTest_ValidInputs_ReturnsExpectedScores(double expectedOutcome, int expectedWin, int expectedLoss)
         {
-            var (winScore, lossScore) = GameLogic.CalculateExpectedScore((decimal)expectedOutcome);
+            var (winScore, lossScore) = target.CalculateExpectedScore((decimal)expectedOutcome);
 
             Assert.AreEqual(expectedWin, winScore);
             Assert.AreEqual(expectedLoss, lossScore);
@@ -118,7 +138,7 @@ namespace TestPickleBallApi
         public void CalculateExpectedScoreTest_InvalidInputs_ThrowsArgumentOutOfRange(double expectedOutcome)
         {
             Assert.ThrowsExactly <ArgumentOutOfRangeException>(() =>
-                GameLogic.CalculateExpectedScore((decimal)expectedOutcome));
+                target.CalculateExpectedScore((decimal)expectedOutcome));
         }
 
         [TestMethod]
@@ -132,7 +152,7 @@ namespace TestPickleBallApi
                 TeamTwoPlayerOne = new PlayerDto(3),
                 TeamTwoPlayerTwo = new PlayerDto(4),
             };
-            var actual = GameLogic.ValidateGamePlayers(_ctx, game);
+            var actual = target.ValidateGamePlayers(_ctx, game);
 
             Assert.AreEqual(string.Empty, actual);
 
@@ -150,16 +170,18 @@ namespace TestPickleBallApi
                 TeamTwoPlayerTwo = new PlayerDto(PlayerId: 7),// <== OJO invalid player id
 
             };
-            var actual = GameLogic.ValidateGamePlayers(_ctx, game);
+            var actual = target.ValidateGamePlayers(_ctx, game);
 
             Assert.StartsWith("Player Id, 7", actual);
 
         }
 
         [TestMethod]
-        public void GetPlayerRatingsTest_ValidOneInitial()
+        public void GetPlayerRatingsTest_ValidDoubleOneInitial()
         {
-            var playedAt = DateTimeOffset.Now;
+            var time = new FakeTimeProvider(DateTimeOffset.UtcNow);
+            var target = new GameLogic(time, _loggerFactory.CreateLogger<GameLogic>());
+            var playedAt = time.GetLocalNow();
             Game game = new()
             {
                 TeamOnePlayerOneId = 1,
@@ -169,7 +191,7 @@ namespace TestPickleBallApi
             };
 
             //act
-            var actual = GameLogic.GetPlayerRatingsAsync(_ctx, game, playedAt).Result;
+            var actual = target.GetPlayerRatingsAsync(_ctx, game, playedAt).Result;
 
             //assert    
             Assert.IsNotNull(actual);
@@ -180,15 +202,174 @@ namespace TestPickleBallApi
             Assert.AreEqual(500, actual.T2P2); // existing player
         }
 
+
+        [TestMethod]
+        [TestCategory("unit")]
+        public async Task  CalculatePredictionAsync_ValidDoubles()
+        {
+            var time = new FakeTimeProvider(DateTimeOffset.UtcNow);
+            var playedAt = time.GetLocalNow();
+            Game game = new()
+            {
+                PlayedDate = playedAt,
+                TeamOnePlayerOneId = 1,
+                TeamOnePlayerTwoId = 2,
+                TeamTwoPlayerOneId = 3,
+                TeamTwoPlayerTwoId = 4,
+                ChangedTime = playedAt.ToUnixTimeMilliseconds(),
+            };
+            time.Advance(TimeSpan.FromSeconds(1)); 
+            GameLogic.GameRatings ratings;
+            GamePrediction prediction;
+
+            //act
+            prediction = await target.CalculatePredictionAsync(_ctx, game);
+
+            //assert
+            Assert.IsNotNull(prediction);
+            Assert.AreEqual(game.GameId, prediction.GameId);
+            Assert.AreEqual(250, prediction.T1p1rating);
+            Assert.AreEqual(300, prediction.T1p2rating);
+            Assert.AreEqual(400, prediction.T2p1rating);
+            Assert.AreEqual(500, prediction.T2p2rating);
+            Assert.IsTrue(prediction.T1predictedWinProb > 0 && prediction.T1predictedWinProb < 1); // win probability should be between 0 and 1
+            Assert.IsGreaterThanOrEqualTo(0, prediction.ExpectT1score); // expected score should be positive
+            Assert.IsGreaterThanOrEqualTo(0, prediction.ExpectT2score); // expected score should be positive
+        }
+
+
+        [TestMethod]
+        [TestCategory("unit")]
+        public async Task CalculateNewPlayerRatings_ValidDouble()
+        {
+            var time = new FakeTimeProvider(DateTimeOffset.UtcNow);
+            var playedAt = time.GetLocalNow();
+            Game game = new()
+            {
+                PlayedDate = playedAt,
+                TeamOneScore = 9,
+                TeamTwoScore = 11,
+                TeamOnePlayerOneId = 1,
+                TeamOnePlayerTwoId = 2,
+                TeamTwoPlayerOneId = 3,
+                TeamTwoPlayerTwoId = 4,
+                ChangedTime = playedAt.ToUnixTimeMilliseconds(),
+                Prediction = new GamePrediction
+                {
+                    T1p1rating = 250,
+                    T1p2rating = 300,
+                    T2p1rating = 400,
+                    T2p2rating = 500,
+                    T1predictedWinProb = 0.3m,
+                    ExpectT1score = 9,
+                    ExpectT2score = 11,
+                }
+            };
+
+            //act
+            var actual = target.CalculateNewPlayerRatings(game);
+
+            //assert
+            Assert.IsNotNull(actual);
+            Assert.HasCount(4, actual);
+            var player1Rating = actual.First(r => r.PlayerId == game.TeamOnePlayerOneId);
+            Assert.AreEqual(game.PlayedDate.Value.Date, player1Rating.RatingDate.Date);
+            Assert.AreEqual(255, player1Rating.Rating);
+
+            var player2Rating = actual.First(r => r.PlayerId == game.TeamOnePlayerTwoId);
+            Assert.AreEqual(game.PlayedDate.Value.Date, player2Rating.RatingDate.Date);
+            Assert.AreEqual(307, player2Rating.Rating);
+
+            var player3Rating = actual.First(r => r.PlayerId == game.TeamTwoPlayerOneId);
+            Assert.AreEqual(game.PlayedDate.Value.Date, player3Rating.RatingDate.Date);
+            Assert.AreEqual(395, player3Rating.Rating);
+
+            var player4Rating = actual.First(r => r.PlayerId == game.TeamTwoPlayerTwoId);
+            Assert.AreEqual(game.PlayedDate.Value.Date, player4Rating.RatingDate.Date);
+            Assert.AreEqual(493, player4Rating.Rating);
+
+        }
+        [TestMethod]
+        [TestCategory("unit")]
+        public async Task CalculateNewPlayerRatings_ValidSingle()
+        {
+            var time = new FakeTimeProvider(DateTimeOffset.UtcNow);
+            var playedAt = time.GetLocalNow();
+            Game game = new()
+            {
+                PlayedDate = playedAt,
+                TeamOneScore = 9,
+                TeamTwoScore = 11,
+                TeamOnePlayerOneId = 1,
+                TeamTwoPlayerOneId = 3,
+                ChangedTime = playedAt.ToUnixTimeMilliseconds(),
+                Prediction = new GamePrediction
+                {
+                    T1p1rating = 250,
+                    T2p1rating = 400,
+                    T1predictedWinProb = 0.3m,
+                    ExpectT1score = 9,
+                    ExpectT2score = 11,
+                }
+            };
+
+            //act
+            var actual = target.CalculateNewPlayerRatings(game);
+
+            //assert
+            Assert.IsNotNull(actual);
+            Assert.HasCount(2, actual);
+            var player1Rating = actual.First(r => r.PlayerId == game.TeamOnePlayerOneId);
+            Assert.AreEqual(game.PlayedDate.Value.Date, player1Rating.RatingDate.Date);
+            Assert.AreEqual(262, player1Rating.Rating);
+
+            var player3Rating = actual.First(r => r.PlayerId == game.TeamTwoPlayerOneId);
+            Assert.AreEqual(game.PlayedDate.Value.Date, player3Rating.RatingDate.Date);
+            Assert.AreEqual(388, player3Rating.Rating);
+
+        }
+
+
+        [TestMethod]
+        [TestCategory("unit")]
+        public async Task CalculatePredictionAsync_ValidSingles()
+        {
+            var time = new FakeTimeProvider(DateTimeOffset.UtcNow);
+            var playedAt = time.GetLocalNow();
+            Game game = new()
+            {
+                PlayedDate = playedAt,
+                TeamOnePlayerOneId = 1,
+                TeamTwoPlayerOneId = 3,
+                ChangedTime = playedAt.ToUnixTimeMilliseconds(),
+            };
+
+            GameLogic.GameRatings ratings;
+            GamePrediction prediction;
+            //act
+            prediction = await target.CalculatePredictionAsync(_ctx, game);
+
+            Assert.IsNotNull(prediction);
+            Assert.AreEqual(game.GameId, prediction.GameId);
+            Assert.AreEqual(250, prediction.T1p1rating);
+            Assert.AreEqual(400, prediction.T2p1rating);
+            Assert.IsTrue(prediction.T1predictedWinProb > 0 && prediction.T1predictedWinProb < 1); // win probability should be between 0 and 1
+            Assert.IsGreaterThanOrEqualTo(0, prediction.ExpectT1score); // expected score should be positive
+            Assert.IsGreaterThanOrEqualTo(0, prediction.ExpectT2score); // expected score should be positive
+        }
+
         [TestMethod]
         [TestCategory("unit")]
         public void ValidateGameTest_NullGame()
         {
             //arrange
+            var time = new FakeTimeProvider();
+            var target = new GameLogic(time, _loggerFactory.CreateLogger<GameLogic>());
+
             GameDto game = null!;
 
             //act
-            var actual = GameLogic.ValidateGame(game);
+            var actual = target.ValidateGame(game);
 
             //assert
             Assert.StartsWith("Game data is null", actual);
@@ -208,7 +389,7 @@ namespace TestPickleBallApi
             );
 
             //act
-            var actual = GameLogic.ValidateGame(game);
+            var actual = target.ValidateGame(game);
 
             //assert
             Assert.StartsWith("Team One Player One can not be NULL", actual);
@@ -228,7 +409,7 @@ namespace TestPickleBallApi
             };
 
             //act
-            var actual = GameLogic.ValidateGame(game);
+            var actual = target.ValidateGame(game);
 
             //assert
             Assert.StartsWith("Team Two Player One can not be NULL", actual);
@@ -248,7 +429,7 @@ namespace TestPickleBallApi
             };
 
             //act
-            var actual = GameLogic.ValidateGame(game);
+            var actual = target.ValidateGame(game);
 
             //assert
             Assert.StartsWith("Team One cannot have the same player twice.", actual);
@@ -268,7 +449,7 @@ namespace TestPickleBallApi
             };
 
             //act
-            var actual = GameLogic.ValidateGame(game);
+            var actual = target.ValidateGame(game);
 
             //assert
             Assert.StartsWith("Team Two cannot have the same player twice.", actual );
@@ -289,7 +470,7 @@ namespace TestPickleBallApi
             };
 
             //act
-            var actual = GameLogic.ValidateGame(game);
+            var actual = target.ValidateGame(game);
 
             //assert
             Assert.Contains("Valid TypeGameId", actual);
@@ -298,8 +479,8 @@ namespace TestPickleBallApi
 
 
         [TestMethod]
-        [DataRow(1, null, null, 2, "Player can not be on both teams")]
-        [DataRow(1, null, 3, null, "Player can not be on both teams")]
+        [DataRow(1, null, null, 2, "Team Two Player One can not be NULL")]
+        [DataRow(null, 2, 3, null, "Team One Player One can not be NULL")]
         [DataRow(1, 2, 3, 2, "Player can not be on both teams")]
         [DataRow(1, 2, 2, 4, "Player can not be on both teams")]
         [DataRow(1, 2, 3, 1, "Team 1 first Player can not be on both teams")]
@@ -308,7 +489,7 @@ namespace TestPickleBallApi
         [DataRow(1, 2, 3, 3, "Team Two cannot have the same player")]
 
         [TestCategory("unit")]
-        public void ValidateGameTest_SamePlayer(int p1, int p2, int p3, int p4, string expected)
+        public void ValidateGameTest_SamePlayer(int? p1, int? p2, int? p3, int? p4, string expected)
         {
             //arrange
             var game = new GameDto
@@ -321,7 +502,7 @@ namespace TestPickleBallApi
             };
 
             //act
-            var actual = GameLogic.ValidateGame(game);
+            var actual = target.ValidateGame(game);
 
             //assert
             Assert.StartsWith(expected, actual);
@@ -335,7 +516,7 @@ namespace TestPickleBallApi
         [DataRow(-1, 15, "negative")]
         [DataRow(11,11, "tied")]
         [TestCategory("unit")]
-        public void ValidateGameTest_VariousScores(int s1, int s2, string expected)
+        public void ValidateGameTest_VariousScores(int? s1, int? s2, string expected)
         {
             //arrange
             var game = new GameDto
@@ -345,11 +526,12 @@ namespace TestPickleBallApi
                 TeamTwoPlayerOne = new PlayerDto(PlayerId: 3),
                 TeamTwoPlayerTwo = new PlayerDto(PlayerId: 4),
                 TeamOneScore = s1,
-                TeamTwoScore = s2,  
+                TeamTwoScore = s2,
+                ChangedTime = 638943944899710263,
             };
 
             //act
-            var actual = GameLogic.ValidateGame(game);
+            var actual = target.ValidateGame(game);
 
             //assert
             Assert.Contains(expected, actual);
@@ -363,7 +545,7 @@ namespace TestPickleBallApi
         [DataRow(null, null, 0L, "both scores must be provided")]
         [DataRow(11,   null, 0L, "both scores must be provided")]
         [DataRow(null,    8, 638943944899710263, "both scores must be provided")]
-        [DataRow(11,      8, 638943944899710263, "")]
+        [DataRow(11,      7, 638943944899710263, "")]
         [DataRow(11, 8, 648943954899710263, "the future")]
         [TestCategory("unit")]
         public void ValidateGameTest_ScoreDate(int? s1, int? s2, long? ticks, string expected)
@@ -383,7 +565,7 @@ namespace TestPickleBallApi
             };
 
             //act
-            var actual = GameLogic.ValidateGame(game);
+            var actual = target.ValidateGame(game);
 
             //assert
             if (string.IsNullOrEmpty(expected))

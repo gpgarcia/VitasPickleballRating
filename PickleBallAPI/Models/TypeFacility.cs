@@ -9,4 +9,5 @@ public partial class TypeFacility
 
     public string Name { get; set; } = null!;
 
+    public virtual ICollection<Facility> Facilities { get; set; } = new List<Facility>();
 }

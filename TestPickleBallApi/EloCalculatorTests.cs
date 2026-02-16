@@ -99,7 +99,7 @@ public class EloCalculatorTests
             int player1Rating, int player2Rating, double expectedOutcome, double actualOutcome,
             int expectedP1Rating, int expectedP2Rating)
         {
-            var (newP1Rating, newP2Rating) = EloCalculator.CalculateNewRating(player1Rating, player2Rating, (decimal)expectedOutcome, (decimal)actualOutcome, KFactor);
+            var (newP1Rating, newP2Rating) = EloCalculator.CalculateNewRatingDoubles(player1Rating, player2Rating, (decimal)expectedOutcome, (decimal)actualOutcome, KFactor);
 
             Assert.IsGreaterThanOrEqualTo(200, newP1Rating, "Player 1 rating should not be below minimum.");
             Assert.IsGreaterThanOrEqualTo(200, newP2Rating, "Player 2 rating should not be below minimum.");

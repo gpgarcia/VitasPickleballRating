@@ -27,7 +27,14 @@ namespace PickleBallAPI.Controllers
     /// </remarks>
     [Route("api/[controller]")]
     [ApiController]
-    public class GamesController(VprContext context, IMapper mapper, ILogger<GamesController> logger) : ControllerBase
+    public class GamesController
+    (
+        VprContext context
+        , IMapper mapper
+        , TimeProvider time
+        , GameLogic gameLogic
+        , ILogger<GamesController> logger
+    ) : ControllerBase
     {
 
         // GET: api/Games
@@ -71,7 +78,7 @@ namespace PickleBallAPI.Controllers
             var records = mapper.Map<List<GameRawDto>>(games);
             var bytes = await GenerateCsvFileAsync(records);
             // filename of exported file with timestamp
-            var fileName = $"games_raw_{DateTime.UtcNow:yyyyMMddHHmmss}.csv";
+            var fileName = $"games_raw_{time.GetUtcNow():yyyyMMddHHmmss}.csv";
             return File(bytes!, "text/csv; charset=utf-8", fileName);
         }
 
@@ -94,7 +101,6 @@ namespace PickleBallAPI.Controllers
 
         // GET: api/Games/5
         /// <summary>
-        /// GET: api/Games/5
         /// Retrieves a single game by identifier.
         /// </summary>
         /// <param name="id">The identifier of the game to fetch.</param>
@@ -129,11 +135,7 @@ namespace PickleBallAPI.Controllers
         /// - Returns 400 BadRequest when the route id does not match <c>gameDto.GameId</c>
         ///   or when validation of the game or its players fails.
         /// - Returns 404 NotFound when a concurrency conflict occurs and the game no longer exists.
-        /// - Returns 204 NoContent on successful update.
-        ///
-        /// Note: optimistic concurrency is not yet implemented (TODO). The method catches
-        /// <see cref="DbUpdateConcurrencyException"/> to detect deleted resources but rethrows
-        /// other concurrency failures.
+        /// - Returns 204 NoContent on successful updat
         /// </remarks>
         /// <param name="id">The identifier of the game to update. Must match <c>gameDto.GameId</c>.</param>
         /// <param name="gameDto">The updated game data transfer object.</param>
@@ -144,49 +146,58 @@ namespace PickleBallAPI.Controllers
         /// - <see cref="StatusCodes.Status404NotFound"/> when the game does not exist.
         /// </returns>
         [HttpPut("{id}")]
-        [ProducesResponseType(StatusCodes.Status400BadRequest, Type= typeof(string)) ]
+        [ProducesResponseType(StatusCodes.Status400BadRequest, Type = typeof(string))]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         public async Task<IActionResult> PutGame(int id, GameDto gameDto)
         {
             //TODO: implement optimistic concurrency
             logger.LogTrace("Received request to update a game.");
-            Game game;
+
             if (id != gameDto.GameId)
             {
                 return BadRequest("Id does not match game data");
             }
-            var msg = GameLogic.ValidateGame(gameDto);
-            if (msg == string.Empty)  // only validate players if the game is valid
+
+            var msg = gameLogic.ValidateGame(gameDto);
+            if (msg == string.Empty) // only validate players if the game is valid
             {
-                msg = GameLogic.ValidateGamePlayers(context, gameDto);
+                msg = gameLogic.ValidateGamePlayers(context, gameDto);
             }
             if (msg != string.Empty)
             {
                 return BadRequest(msg);
             }
-            game = mapper.Map<Game>(gameDto);
+
+            // Load the existing game so we update the tracked entity instead of attaching a new one
+            var existingGame = await context.GetGameAsync(id);
+            if (existingGame == null)
+            {
+                return NotFound();
+            }
 
             try
             {
-                context.Entry(game).State = EntityState.Modified;
-                await UpdateGameDependencies(game);
-                // if game exists, so does the prediction
-                context.Entry(game.GamePrediction!).State = EntityState.Modified;
+                // Map scalar properties from DTO onto the tracked entity
+                mapper.Map(gameDto, existingGame);
+
+                // Let dependent data be recalculated for the tracked entity
+                await UpdateGameDependencies(existingGame);
+
                 await context.SaveChangesAsync();
                 logger.LogTrace("All Saved.");
             }
-            catch (DbUpdateConcurrencyException)
+            catch (DbUpdateConcurrencyException ex)
             {
                 if (!context.GameExists(id))
                 {
                     return NotFound();
                 }
-                else
-                {
-                    throw;
-                }
+
+                logger.LogWarning(ex, "Concurrency conflict when updating Game {GameId}.", id);
+                return StatusCode(StatusCodes.Status409Conflict, "The game was modified by another process. Please refresh and try again.");
             }
+
             return NoContent();
         }
 
@@ -200,9 +211,11 @@ namespace PickleBallAPI.Controllers
         /// <returns>
         /// - 204 NoContent on success.
         /// - 404 NotFound when the game does not exist or a concurrency conflict indicates deletion.
+        /// - 409 Conflict when a concurrency conflict indicates the game was modified by another process during update.
         /// </returns>
         [HttpPut("{id}/update")]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status409Conflict)]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         public async Task<IActionResult> PutGameUpdate(int id)
         {
@@ -227,7 +240,7 @@ namespace PickleBallAPI.Controllers
                 }
                 else
                 {
-                    throw;
+                    return Conflict("The game was modified by another process. Please refresh and try again.");
                 }
             }
             return NoContent();
@@ -249,51 +262,62 @@ namespace PickleBallAPI.Controllers
         /// <returns>
         /// - 204 NoContent on success.
         /// - 404 NotFound if a concurrency conflict indicates a game was deleted during processing.
+        /// - 409 Conflict if a concurrency conflict indicates a game was modified by another process during processing.
         /// </returns>
         [HttpPut("update")]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status409Conflict)]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         public async Task<IActionResult> PutGameUpdate()
         {
             logger.LogTrace("Remove old Player Ratings and Game Prediction");
-            if(context.Database.IsSqlServer())
+
+            // Use bulk delete for efficiency
+            if (context.Database.IsSqlServer())
             {
-                context.Database.ExecuteSqlRaw("TRUNCATE TABLE [PlayerRating]");
+                await context.Database.ExecuteSqlRawAsync("TRUNCATE TABLE [PlayerRating]");
+                await context.Database.ExecuteSqlRawAsync("DELETE FROM [GamePrediction]");
             }
             else
             {
-                context.PlayerRatings.ExecuteDelete();
+                await context.PlayerRatings.ExecuteDeleteAsync();
+                await context.GamePredictions.ExecuteDeleteAsync();
             }
-            foreach (var g in context.Games.ToList())
-                {
-                    if (g.GamePrediction != null)
-                    {
-                        g.GamePrediction = null;
-                    }
-                }
-            logger.LogTrace("update all games base on existing data.");
-            foreach (var id in context.Games.Select(g => g.GameId).ToList())
+
+            // Detach all tracked entities to prevent conflicts with bulk delete operations
+            context.ChangeTracker.Clear();
+
+            logger.LogTrace("Update all games based on existing data.");
+
+            var gameIds = await context.Games.Select(g => g.GameId).ToListAsync();
+            foreach (var id in gameIds)
             {
-                var tmp = await context.GetGameAsync(id);
-                Game game = tmp!;
-                try
+                var game = await context.GetGameAsync(id);
+                if (game != null)
                 {
                     await UpdateGameDependencies(game);
-                    await context.SaveChangesAsync();
-                    logger.LogTrace("Saved Updated Game {game.GameId}", game.GameId);
-                }
-                catch (DbUpdateConcurrencyException)
-                {
-                    if (!context.GameExists(id))
-                    {
-                        return NotFound();
-                    }
-                    else
-                    {
-                        throw;
-                    }
                 }
             }
+
+            try
+            {
+                await context.SaveChangesAsync();
+                logger.LogTrace("Saved all updated games.");
+            }
+            catch (DbUpdateConcurrencyException ex)
+            {
+                logger.LogWarning(ex, "A concurrency conflict occurred while updating games.");
+                // Check if any of the games involved in the conflict have been deleted.
+                foreach (var entry in ex.Entries)
+                {
+                    if (entry.Entity is Game game && !await context.GameExistsAsync(game.GameId))
+                    {
+                        return NotFound($"Game with ID {game.GameId} was deleted during the update process.");
+                    }
+                }
+                return Conflict("The game was modified by another process. Please refresh and try again.");
+            }
+
             return NoContent();
         }
 
@@ -305,7 +329,7 @@ namespace PickleBallAPI.Controllers
         /// Creates a new game.
         /// </summary>
         /// <remarks>
-        /// Validates the provided <see cref="GameDto"/> and its players, maps it to the domain <see cref="Game"/>,
+        /// Validates the provided <see cref="GameDto" /> and its players, maps it to the domain <see cref="Game"/>,
         /// computes the initial prediction and any player rating changes, persists the game and returns a 201 Created response.
         /// On success the Location header points to the newly created resource via the <c>GetGame</c> action.
         /// </remarks>
@@ -322,12 +346,12 @@ namespace PickleBallAPI.Controllers
         public async Task<ActionResult<GameDto>> PostGame(GameDto gameDto)
         {
             logger.LogTrace("Received request to update a game.");
-            var msg = GameLogic.ValidateGame(gameDto);
+            var msg = gameLogic.ValidateGame(gameDto);
             try
             {
                 if (msg == string.Empty)  // only validate players if the game is valid
                 {
-                    msg = GameLogic.ValidateGamePlayers(context, gameDto);
+                    msg = gameLogic.ValidateGamePlayers(context, gameDto);
                 }
                 if (msg != string.Empty)
                 {
@@ -351,24 +375,7 @@ namespace PickleBallAPI.Controllers
         }
 
 
-        /// <summary>
-        /// Calculates the prediction and gathers current player ratings for the supplied game.
-        /// </summary>
-        /// <param name="game">The game entity to calculate prediction for.</param>
-        /// <returns>
-        /// A tuple containing:
-        /// - <c>GameLogic.GameRatings ratings</c>: current player ratings used for prediction.
-        /// - <c>GamePrediction gamePrediction</c>: the computed prediction for the game.
-        /// </returns>
-        private async Task<(GameLogic.GameRatings ratings, GamePrediction gamePrediction)> CalculatePrediction(Game game)
-        {
-            var playedAt = game.PlayedDate ?? DateTimeOffset.Now;
-            var gameId = game.GameId;
-            logger.LogTrace("Calculating Game Prediction  for game {gameId} played at {playedAt}.", gameId, playedAt);
-            var ratings = await GameLogic.GetPlayerRatingsAsync(context, game, playedAt);
-            var gamePrediction = GameLogic.GetGamePrediction(game.GameId, playedAt, ratings);
-            return (ratings, gamePrediction);
-        }
+
 
         /// <summary>
         /// Recalculates and updates game-level dependencies:
@@ -382,13 +389,15 @@ namespace PickleBallAPI.Controllers
         /// </remarks>
         private async Task UpdateGameDependencies(Game game)
         {
+            //game is not null here
             GameLogic.GameRatings ratings;
-            (ratings, game.GamePrediction) = await CalculatePrediction(game);
+
+            game.Prediction = await gameLogic.CalculatePredictionAsync(context, game);
             logger.LogTrace("Game Prediction calculated and updated.");
             if (game.PlayedDate != null)
             {
-                //game played and have scores
-                var newRatings = GameLogic.CalculateNewPlayerRatings(game, ratings);
+                //game played and has scores and prediction
+                var newRatings = gameLogic.CalculateNewPlayerRatings(game);
                 foreach (var n in newRatings)
                 {
                     var pr = context.PlayerRatings.FirstOrDefault(pr =>
@@ -400,11 +409,13 @@ namespace PickleBallAPI.Controllers
                     }
                     else
                     {
-                        pr = n;
+                        pr.Rating = n.Rating;
+                        pr.RatingDate = n.RatingDate;
+                        pr.ChangedTime = n.ChangedTime;
                     }
                 }
+                logger.LogTrace("Player Ratings updated.");
             }
-            logger.LogTrace("Player Ratings updated.");
         }
 
         //// DELETE: api/Games/5

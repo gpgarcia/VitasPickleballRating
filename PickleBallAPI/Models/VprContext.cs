@@ -15,6 +15,10 @@ public partial class VprContext : DbContext
 
     public virtual DbSet<Game> Games { get; set; }
 
+    public virtual DbSet<GameDetail> GameDetails { get; set; }
+
+    public virtual DbSet<GamePrediction> GamePredictions { get; set; }
+
     public virtual DbSet<Player> Players { get; set; }
 
     public virtual DbSet<PlayerRating> PlayerRatings { get; set; }
@@ -54,7 +58,7 @@ public partial class VprContext : DbContext
                 .IsUnicode(false)
                 .IsFixedLength();
 
-            entity.HasOne(d => d.TypeFacility).WithMany()
+            entity.HasOne(d => d.TypeFacility).WithMany(p => p.Facilities)
                 .HasForeignKey(d => d.TypeFacilityId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_Facility_TypeFacilityID");
@@ -66,34 +70,77 @@ public partial class VprContext : DbContext
 
             entity.ToTable("Game");
 
-            entity.HasOne(d => d.Facility).WithMany()
+            entity.HasOne(d => d.Facility).WithMany(p => p.Games)
                 .HasForeignKey(d => d.FacilityId)
                 .HasConstraintName("FK_Game_FacilityId");
 
-            entity.HasOne(d => d.TeamOnePlayerOne).WithMany()
+            entity.HasOne(d => d.TeamOnePlayerOne).WithMany(p => p.GameTeamOnePlayerOnes)
                 .HasForeignKey(d => d.TeamOnePlayerOneId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_Game_Player_t1p1");
 
-            entity.HasOne(d => d.TeamOnePlayerTwo).WithMany()
+            entity.HasOne(d => d.TeamOnePlayerTwo).WithMany(p => p.GameTeamOnePlayerTwos)
                 .HasForeignKey(d => d.TeamOnePlayerTwoId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_Game_Player_t1p2");
 
-            entity.HasOne(d => d.TeamTwoPlayerOne).WithMany()
+            entity.HasOne(d => d.TeamTwoPlayerOne).WithMany(p => p.GameTeamTwoPlayerOnes)
                 .HasForeignKey(d => d.TeamTwoPlayerOneId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_Game_Player_t2p1");
 
-            entity.HasOne(d => d.TeamTwoPlayerTwo).WithMany()
+            entity.HasOne(d => d.TeamTwoPlayerTwo).WithMany(p => p.GameTeamTwoPlayerTwos)
                 .HasForeignKey(d => d.TeamTwoPlayerTwoId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_Game_Player_t2p2");
 
-            entity.HasOne(d => d.TypeGame).WithMany()
+            entity.HasOne(d => d.TypeGame).WithMany(p => p.Games)
                 .HasForeignKey(d => d.TypeGameId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_Game_TypeGameId");
+        });
+
+        modelBuilder.Entity<GameDetail>(entity =>
+        {
+            entity
+                .HasNoKey()
+                .ToView("GameDetails");
+
+            entity.Property(e => e.GameTypeName)
+                .HasMaxLength(20)
+                .HasColumnName("game_type_name");
+            entity.Property(e => e.Team1Player1FirstName)
+                .HasMaxLength(50)
+                .HasColumnName("team1_player1_FirstName");
+            entity.Property(e => e.Team1Player1LastName)
+                .HasMaxLength(50)
+                .HasColumnName("team1_player1_LastName");
+            entity.Property(e => e.Team1Player1PlayerId).HasColumnName("team1_player1_PlayerId");
+            entity.Property(e => e.Team1Player2FirstName)
+                .HasMaxLength(50)
+                .HasColumnName("team1_player2_FirstName");
+            entity.Property(e => e.Team1Player2LastName)
+                .HasMaxLength(50)
+                .HasColumnName("team1_player2_LastName");
+            entity.Property(e => e.Team1Player2PlayerId).HasColumnName("team1_player2_PlayerId");
+            entity.Property(e => e.Team1Score).HasColumnName("team1_Score");
+            entity.Property(e => e.Team1Win).HasColumnName("team1_Win");
+            entity.Property(e => e.Team2Player1FirstName)
+                .HasMaxLength(50)
+                .HasColumnName("team2_player1_FirstName");
+            entity.Property(e => e.Team2Player1LastName)
+                .HasMaxLength(50)
+                .HasColumnName("team2_player1_LastName");
+            entity.Property(e => e.Team2Player1PlayerId).HasColumnName("team2_player1_PlayerId");
+            entity.Property(e => e.Team2Player2FirstName)
+                .HasMaxLength(50)
+                .HasColumnName("team2_player2_FirstName");
+            entity.Property(e => e.Team2Player2LastName)
+                .HasMaxLength(50)
+                .HasColumnName("team2_player2_LastName");
+            entity.Property(e => e.Team2Player2PlayerId).HasColumnName("team2_player2_PlayerId");
+            entity.Property(e => e.Team2Score).HasColumnName("team2_Score");
+            entity.Property(e => e.Team2Win).HasColumnName("team2_Win");
         });
 
         modelBuilder.Entity<GamePrediction>(entity =>
@@ -113,7 +160,7 @@ public partial class VprContext : DbContext
             entity.Property(e => e.T2p1rating).HasColumnName("T2P1Rating");
             entity.Property(e => e.T2p2rating).HasColumnName("T2P2Rating");
 
-            entity.HasOne(d => d.Game).WithOne(p => p.GamePrediction)
+            entity.HasOne(d => d.Game).WithOne(p => p.Prediction)
                 .HasForeignKey<GamePrediction>(d => d.GameId)
                 .HasConstraintName("FK_GamePrediction_Game");
         });
@@ -142,6 +189,11 @@ public partial class VprContext : DbContext
             entity.HasIndex(e => new { e.PlayerId, e.GameId }, "UQ_PlayerRating_PlayerId_GameId")
                 .IsUnique()
                 .IsClustered();
+
+            entity.HasOne(d => d.Game).WithMany(p => p.PlayerRatings)
+                .HasForeignKey(d => d.GameId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_PlayerRating_game");
 
             entity.HasOne(d => d.Player).WithMany(p => p.PlayerRatings)
                 .HasForeignKey(d => d.PlayerId)
