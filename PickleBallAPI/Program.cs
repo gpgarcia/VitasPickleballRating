@@ -7,6 +7,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.OpenApi;
+using PickleBallAPI.Controllers;
 using PickleBallAPI.Models;
 using System;
 using System.IO;
@@ -119,7 +120,8 @@ public static class Program
 
         var configuration = new MapperConfiguration(cfg => cfg.AddProfile<PickleBallProfile>(), loggerFactory);
         builder.Services.AddSingleton<IMapper>(sp => new Mapper(configuration, sp.GetService));
-
+        builder.Services.AddSingleton(TimeProvider.System);
+        builder.Services.AddScoped<GameLogic>();
         builder.Services.AddControllers();
         // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
         builder.Services.AddEndpointsApiExplorer();
