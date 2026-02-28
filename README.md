@@ -1,137 +1,158 @@
 # VitasPickleballRating
-Pickleball Rating system for use by Vitas players.
-1. It keeps track of players, and games played.
-1. It estimates the score of a game between two teams.
-1. It computes a new rating for each player after a game.
-1. It displays win-loss standings of player and their rating.
-1. It displays a players rating over time.
+
+A Pickleball Rating system for use by Vitas players.
+
+- Tracks players and games played
+- Estimates the outcome of a game between two teams using an Elo-based algorithm
+- Computes a new rating for each player after a game
+- Displays win-loss standings of players and their ratings
+- Displays a player's rating over time
+
+## Technology Stack
+
+- **Backend:** ASP.NET Core 8 Web API (C#)
+- **ORM:** Entity Framework Core (SQL Server)
+- **Database:** Microsoft SQL Server (localdb, Docker, or Azure SQL)
+- **Database Project:** SDK-style SQL project (`.sqlproj`)
+- **Mapping:** AutoMapper
+- **API Documentation:** Swagger / OpenAPI
+- **CI/CD:** Azure Pipelines → Azure Container Registry
+- **Testing:** MSTest
+
+## Prerequisites
+
+- [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8)
+- [Docker](https://www.docker.com/) (optional – for running a containerized SQL Server or the API itself)
+- [sqlpackage](https://learn.microsoft.com/en-us/sql/tools/sqlpackage/sqlpackage) – installed via `dotnet tool install --global microsoft.sqlpackage`
+- [dotnet-ef](https://learn.microsoft.com/en-us/ef/core/cli/dotnet) – installed via `dotnet tool install --global dotnet-ef`
+- SQL Server Management Studio (SSMS) or Azure Data Studio (optional – for managing the database)
+
+> **Windows note:** If Docker builds hang, run the commands from a WSL2 Ubuntu shell.
 
 ## Getting Started
-There are two ways to setup the database for development.
-1. Use a localdb SQL Server instance.
-1. use a dockerized SQL Server instance.
 
-For production deployment a azure SQL database instance is used.
+There are two ways to set up the database for development:
+1. Use a **localdb** SQL Server instance (Windows / Visual Studio)
+2. Use a **Dockerized** SQL Server instance (cross-platform)
 
-__NOTE:__ 
-If docker builds are hanging in Windows environment, the workaround is to use
-the WSL2 Ubuntu environment to run the commands
+For production, an Azure SQL Database instance is used.
 
-
-In all case the first step is to build the DACPAC.
+### 1. Build the DACPAC
 
 From the solution folder run:
+
 ```sh
 dotnet build vpr/vpr.sqlproj
 ```
 
-### Setup tool
+### 2. Install Required Tools
 
-The tool used to deploy is `sqlpackage.exe` which is part of the
-Microsoft/sqlpackage tool.
-Install Microsoft/sqlpackage tool:
 ```sh
 dotnet tool install --global microsoft.sqlpackage
-```
-
-
-
-Setup the Entity Framework Tools. The sqlproj should already have the
-**Microsoft.EntityFrameworkCore.Design** package reference. If not add it, by
-cd'ing to the vpr folder and running:
-```sh
-dotnet add package Microsoft.EntityFrameworkCore.Design
-```
-then install the tool:
-```sh
-
 dotnet tool install --global dotnet-ef
 ```
 
-Next deploy the DACPAC to your preferred dev database server.
+### 3. Deploy the Database
 
-### Using localdb SQL Server instance
-To use a localdb SQL Server instance, ensure you have localdb installed. This
-is part of the Visual Studio installation.
-One can check using the VS __SQL Server Object Explorer__ window.
-Create the database `vpr` on the localdb instance `(localdb)\ProjectModels`.
+#### Option A – localdb (Windows / Visual Studio)
+
+Ensure localdb is installed (included with Visual Studio). Verify using the **SQL Server Object Explorer** window.
 
 ```sh
 sqlpackage.exe /Action:Publish /SourceFile:"vpr\bin\Debug\vpr.dacpac" /TargetServerName:"(localdb)\ProjectModels" /TargetDatabaseName:vpr /TargetTrustServerCertificate:True /p:CreateNewDatabase=True
-
 ```
-__NOTE:__ the create new database parameter. Data is not preserved. This
-primarily for testing.
 
-### Using dockerized SQL Server instance
-Start the mssql server container
+> **Note:** `CreateNewDatabase=True` drops and recreates the database. Existing data will be lost.
 
-``` sh
+#### Option B – Dockerized SQL Server
+
+Start the SQL Server container:
+
+```sh
 docker run -e "ACCEPT_EULA=Y" -e "MSSQL_SA_PASSWORD=YourStrong?Password" -e "MSSQL_PID=Express" -p 1433:1433 -d mcr.microsoft.com/mssql/server:2022-latest
-
 ```
-Deploy the dacpac
 
-Run the following command to deploy the dacpac to the mssql server container
-running on localhost:
+Deploy the DACPAC:
 
-``` cmd
+```sh
 sqlpackage.exe /Action:Publish /SourceFile:"vpr\bin\Debug\vpr.dacpac" /TargetServerName:localhost /TargetDatabaseName:vpr /TargetTrustServerCertificate:True /TargetUser:sa /TargetPassword:"YourStrong?Password" /p:CreateNewDatabase=True
-
 ```
-Create Logins and Users using SSMS. TODO: figure how to script this. doing it
-in the dacpac does not appear to work. ssms does some stuff behind the scenes.
 
-### Application update
-When changing the Database schema, you will need to regenerate the EF model.
-To regenerate the EF model from the database, run the following command in the
-Package Manager Console:
+After deploying, create the required logins and users using SSMS or Azure Data Studio.
+
+### 4. Configure the Connection String
+
+Update `PickleBallAPI/appsettings.Development.json` with the appropriate connection string for your environment:
+
+```json
+{
+  "ConnectionStrings": {
+    "vpr": "Server=(localdb)\\ProjectModels;Database=vpr;Integrated Security=True;Encrypt=False;Trust Server Certificate=True;"
+  }
+}
 ```
-Scaffold-DbContext -Connection "Server=(localdb)\ProjectModels;Database=vpr;Integrated Security=True;" Microsoft.EntityFrameworkCore.SqlServer -NoOnConfiguring -Force -OutputDir Models
 
+### 5. Run the API
+
+```sh
+dotnet run --project PickleBallAPI/PickleBallAPI.csproj
 ```
-or from the bash command line in the solution folder:
-```bash
- dotnet ef dbcontext scaffold "Server=localhost;Database=vpr;User Id=sa;Password="YourStrong?Password";TrustServerCertificate=True"  Microsoft.EntityFrameworkCore.SqlServer --no-onconfiguring --force --output-dir Models --project PickleBallAPI/PickleBallAPI.csproj
- 
- ```
 
-Next remove Redundant Navigational properties.
-1. `DbSet<GamePrediction>`
-1. GameDetail and `DbSet<GameDetail>` and mapping.
-1. TypeGame.Games
-1. TypeFacility.Facilities
-1. Player.TeamXPlayerY (4 of them)
-1. PlayerRating.Game
-1. Game.PlayerRating
-1. Facility.TypeFacility
-1. Facility.Games
+The Swagger UI is available at `http://localhost:<port>/swagger` when running in the Development environment.
 
+## Docker
 
+### Build the Docker Image
 
-*__NOTE:__*
-To convert a visual Studio SSDT database project to a SDK project suitable for
-dotnet core follow instruction 
-[Here](https://learn.microsoft.com/en-us/sql/tools/sql-database-projects/howto/convert-original-sql-project?view=sql-server-ver17&pivots=sq1-visual-studio).
-You will not be able to build or publish using Visual Studio after converting.
-The above commandline methods will work locally and in a pipeline.
+From the solution folder:
 
-#### To build the Docker Image
-From the solution folder run:
-``` sh
+```sh
 docker build -f PickleBallAPI/Dockerfile -t api:latest --build-arg BUILD_CONFIGURATION=Debug .
-
 ```
-#### To run the application
-``` sh
+
+### Run the Containerized API
+
+```sh
 docker run -d -e ASPNET_ENVIRONMENT=Development -p 8080:8080 api
-
 ```
-### Warning
-To get the 'Generate Code Map to work, deploy vpr to (localdb)\MSSQLlocalDB.
 
-### Database Schema
-The Schema is shown [Here](./VPR_Schema.png)
+## API Endpoints
+
+| Method | Route | Description |
+|--------|-------|-------------|
+| `GET` | `/api/Games` | List all games |
+| `GET` | `/api/Games/{id}` | Get a game by ID |
+| `GET` | `/api/Games/export/raw` | Export all games as a CSV file |
+| `POST` | `/api/Games` | Create a new game |
+| `PUT` | `/api/Games/{id}` | Update an existing game |
+| `PUT` | `/api/Games/{id}/update` | Recalculate prediction and ratings for a single game |
+| `PUT` | `/api/Games/update` | Rebuild all game predictions and player ratings |
+| `GET` | `/api/Player` | List all players |
+| `GET` | `/api/Player/{id}` | Get a player by ID |
+| `GET` | `/api/Player/export/raw` | Export all players as a CSV file |
+| `GET` | `/api/Player/{playerId}/PlayerRatings` | Get ratings for a player |
+| `GET` | `/api/Player/{playerId}/PlayerRatings/LatestBefore/{date}` | Get the latest rating for a player before a given date |
+| `POST` | `/api/Player` | Create a new player |
+| `PUT` | `/api/Player/{id}` | Update an existing player |
+| `GET` | `/api/PlayerRatings` | List all player ratings |
+| `GET` | `/api/PlayerRatings/{id}` | Get a player rating by ID |
+| `POST` | `/api/PlayerRatings` | Create a player rating |
+| `PUT` | `/api/PlayerRatings/{id}` | Update a player rating |
+| `DELETE` | `/api/PlayerRatings/{id}` | Delete a player rating |
+
+## Testing
+
+Run the unit and integration tests from the solution folder:
+
+```sh
+dotnet test
+```
+
+Tests are located in the `TestPickleBallApi` project and cover controllers, game logic, ELO calculations, and AutoMapper profiles.
+
+## Database Schema
+
+The schema diagram is shown [here](./VPR_Schema.png).
 
 ```mermaid
 erDiagram
@@ -210,8 +231,56 @@ erDiagram
     "TypeFacility" ||--o{ "Facility" : "categorizes"
 ```
 
-## Building
+## Development Notes
 
-## ToDo
-- integrate dotnet-tsqlt test runner and tsqlt testing framework
-- Add unit tests for Views and table checks constraints
+### Updating the EF Core Model
+
+When the database schema changes, regenerate the EF Core model.
+
+**From the Visual Studio Package Manager Console:**
+
+```powershell
+Scaffold-DbContext -Connection "Server=(localdb)\ProjectModels;Database=vpr;Integrated Security=True;" Microsoft.EntityFrameworkCore.SqlServer -NoOnConfiguring -Force -OutputDir Models
+```
+
+**From the command line (solution folder):**
+
+```bash
+dotnet ef dbcontext scaffold "Server=localhost;Database=vpr;User Id=sa;Password=YourStrong?Password;TrustServerCertificate=True" Microsoft.EntityFrameworkCore.SqlServer --no-onconfiguring --force --output-dir Models --project PickleBallAPI/PickleBallAPI.csproj
+```
+
+After scaffolding, remove the following redundant navigation properties:
+- `DbSet<GamePrediction>`
+- `GameDetail`, `DbSet<GameDetail>`, and its mapping
+- `TypeGame.Games`
+- `TypeFacility.Facilities`
+- `Player.TeamXPlayerY` (4 properties)
+- `PlayerRating.Game`
+- `Game.PlayerRating`
+- `Facility.TypeFacility`
+- `Facility.Games`
+
+### Converting the SQL Project
+
+To convert a Visual Studio SSDT database project to an SDK-style project suitable for .NET Core, follow the instructions [here](https://learn.microsoft.com/en-us/sql/tools/sql-database-projects/howto/convert-original-sql-project?view=sql-server-ver17&pivots=sq1-visual-studio).
+
+> **Note:** After converting, the project can no longer be built or published using Visual Studio. Use the command-line methods described above.
+
+### Code Map
+
+To get **Generate Code Map** to work, deploy `vpr` to `(localdb)\MSSQLlocalDB`.
+
+## Contributing
+
+1. Fork the repository.
+2. Create a feature branch: `git checkout -b feature/my-feature`
+3. Make your changes and add tests where appropriate.
+4. Commit your changes: `git commit -m "Add my feature"`
+5. Push to your fork: `git push origin feature/my-feature`
+6. Open a Pull Request.
+
+## To Do
+
+- Integrate `dotnet-tsqlt` test runner and tsqlt testing framework
+- Add unit tests for Views and table check constraints
+- Refine the ELO K-factor based on number of games played and game type (recreational vs. tournament)
