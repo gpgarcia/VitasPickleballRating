@@ -20,13 +20,8 @@ steps:
   inputs:
     command: 'build'
     projects: '**/*sqlproj'
+    arguments: '/p:OutDir=$(build.artifactstagingdirectory)'
 
-- task: CopyFiles@2
-  inputs:
-    SourceFolder: '$(agent.builddirectory)/s/vpr/bin/$(Build.Configuration)/net4.7.2'
-    Contents: 'vpr.dacpac'
-    TargetFolder: '$(build.artifactstagingdirectory)'
-    
 - task: PublishBuildArtifacts@1
   inputs:
     PathtoPublish: '$(Build.ArtifactStagingDirectory)'
