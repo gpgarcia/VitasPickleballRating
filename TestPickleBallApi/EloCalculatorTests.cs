@@ -9,6 +9,7 @@ public class EloCalculatorTests
 {
 
     [TestMethod]
+    [TestCategory("unit")]
     public void ExpectedTeamOutcome_ShouldReturnAProbability()
     {
         // Arrange
@@ -31,6 +32,7 @@ public class EloCalculatorTests
     }
 
     [TestMethod]
+    [TestCategory("unit")]
     public void ExpectedTeamOutcome_ShouldBeSymmetric()
     {
         // Arrange
@@ -48,6 +50,7 @@ public class EloCalculatorTests
     }
 
     [TestMethod]
+    [TestCategory("unit")]
     public void ExpectedTeamOutcome_LargeDifference()
     {
         // Arrange
@@ -64,6 +67,7 @@ public class EloCalculatorTests
     }
 
     [TestMethod]
+    [TestCategory("unit")]
     public void ExpectedTeamOutcome_50Diff()
     {
         // Arrange
@@ -79,6 +83,20 @@ public class EloCalculatorTests
         Assert.AreEqual(0.053m, result1, 0.001m, "ExpectedTeamOutcome should be 5.3%.");
     }
 
+    [TestMethod]
+    [TestCategory("unit")]
+    [DataRow(200)]
+    [DataRow(250)]
+    [DataRow(1000)]
+    public void CalculateKFactor_AnyRating_ReturnsBaseKFactor(int rating)
+    {
+        // Act
+        var result = EloCalculator.CalculateKFactor(rating);
+
+        // Assert
+        Assert.AreEqual(80.0, result, "CalculateKFactor should return the base K-Factor for any rating.");
+    }
+
     [TestClass]
     public class ScoreCalculatorTests
     {
@@ -86,6 +104,7 @@ public class EloCalculatorTests
         private const double KFactor = 40.0;
 
         [TestMethod]
+        [TestCategory("unit")]
         [DataRow(200, 200, 0.5, 1.0, 210, 210)]
         [DataRow(300, 300, 0.5, 0.0, 290, 290)]
         [DataRow(400, 400, 0.6, 1.0, 408, 408)]

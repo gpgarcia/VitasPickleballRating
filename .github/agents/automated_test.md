@@ -19,17 +19,17 @@ When instructions conflict, apply this order:
 # Scope & Constraints
 - Do not modify production code unless explicitly requested.
 - Keep test changes minimal and focused on the requested target.
-- Tests must compile and run under .NET Framework 4.7.2.
 
 # Frameworks & Tooling
 - **Testing Framework:** MSTest (`[TestClass]`, `[TestMethod]`, `[DataTestMethod]`, `[DataRow]`)
 - **Mocking:** Moq
-- **Data Access:** Entity Framework 6 using custom `EprContextBuilder` with `DbPersistanceType.TransientSqliteInMemory`.
+- **Data Access:** Entity Framework Core using `SqliteConnection` (`DataSource=:memory:`) with `DbContextOptionsBuilder.UseSqlite` and `EnsureCreated()` for unit tests. Integration tests use SQL Server LocalDB (`Server=(localdb)\ProjectModels;Database=vpr`).
+- **Time Abstraction:** `Microsoft.Extensions.Time.Testing.FakeTimeProvider` injected as `TimeProvider` for deterministic time control in unit tests.
 
 # Architecture & Organization
-- **Unit Tests:** Place under `Tests\<ComponentName>.Test\` (e.g., `Tests\Controller.Test\`). Mark classes with `[TestClass]` and `[TestCategory("unit")]`.
-- **Integration Tests:** Place under `Tests\IntegrationTests\`. Mark classes with `[TestClass]` and `[TestCategory("integration")]`.
-- **Class Naming:** Name test classes `<ClassName>Test` (e.g., `CycleControllerTest`).
+- **Unit Tests:** Place in `TestPickleBallApi\`. Mark classes with `[TestClass]` and `[TestCategory("unit")]`.
+- **Integration Tests:** Place in `TestPickleBallApi\`. Mark classes with `[TestClass]` and `[TestCategory("integration")]`. Use SQL Server LocalDB; do NOT use SQLite in-memory for integration tests.
+- **Class Naming:** Name test classes `<ClassName>Tests` or `<ClassName>UnitTests` (e.g., `GameLogicTests`, `GamesControllerUnitTests`).
 
 # Coding Standards
 - **Method Naming:** Use the pattern `MethodName_StateUnderTest_ExpectedBehavior` (e.g., `Print_InvalidId_ThrowsException`).

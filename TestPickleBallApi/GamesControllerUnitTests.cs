@@ -14,6 +14,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace TestPickleBallApi
 {
@@ -167,14 +168,14 @@ namespace TestPickleBallApi
 
         [TestMethod]
         [TestCategory("unit")]
-        public void GetGamesTest_ValueFound()
+        public async Task GetGames_GamesExist_ReturnsOkWithAll()
         {
             // Arrange
             var log = _loggerFactory.CreateLogger<GamesController>();
             using var ctx = new VprContext(_vprOpt);
             var target = new GamesController(ctx, _mapper, time, gameLogic, log);
             // Act
-            var actual = target.GetGames().Result;
+            var actual = await target.GetGames();
             // Assert
             Assert.IsNotNull(actual);
             Assert.IsInstanceOfType<OkObjectResult>(actual.Result);
@@ -189,14 +190,14 @@ namespace TestPickleBallApi
 
         [TestMethod]
         [TestCategory("unit")]
-        public void GetGameTest_ValueFound()
+        public async Task GetGame_ValidId_ReturnsOkWithDto()
         {
             // Arrange
             var log = _loggerFactory.CreateLogger<GamesController>();
             using var ctx = new VprContext(_vprOpt);
             var target = new GamesController(ctx, _mapper, time, gameLogic, log);
             // Act
-            var actual = target.GetGame(1).Result;
+            var actual = await target.GetGame(1);
             // Assert
             Assert.IsNotNull(actual);
             Assert.IsInstanceOfType<OkObjectResult>(actual.Result);
@@ -220,14 +221,14 @@ namespace TestPickleBallApi
 
         [TestMethod]
         [TestCategory("unit")]
-        public void GetGameTest_ValueNotFount()
+        public async Task GetGame_IdNotFound_ReturnsNotFound()
         {
             // Arrange
             var log = _loggerFactory.CreateLogger<GamesController>();
             using var ctx = new VprContext(_vprOpt);
             var target = new GamesController(ctx, _mapper, time, gameLogic, log);
             // Act
-            var actual = target.GetGame(-1).Result;
+            var actual = await target.GetGame(-1);
             // Assert
             Assert.IsNotNull(actual);
             Assert.IsInstanceOfType<NotFoundResult>(actual.Result);
@@ -239,7 +240,7 @@ namespace TestPickleBallApi
 
         [TestMethod]
         [TestCategory("unit")]
-        public void PostGameTest_ValidData()
+        public async Task PostGame_ValidDto_ReturnsCreated()
         {
             _testLog.LogTrace("Starting PostGameTest_ValidData");
             // Arrange
@@ -259,7 +260,7 @@ namespace TestPickleBallApi
                 TeamTwoScore = 8,
             };
             // Act
-            var actual = target.PostGame(newGameDto).Result;
+            var actual = await target.PostGame(newGameDto);
             // Assert
             Assert.IsNotNull(actual);
             Assert.IsInstanceOfType<CreatedAtActionResult>(actual.Result);
@@ -297,7 +298,7 @@ namespace TestPickleBallApi
 
         [TestMethod]
         [TestCategory("unit")]
-        public void PostGameTest_InvalidPlayer()
+        public async Task PostGame_InvalidPlayerId_ReturnsBadRequest()
         {
             _testLog.LogTrace("Starting PostGameTest_InvalidPlayer");
             // Arrange
@@ -317,7 +318,7 @@ namespace TestPickleBallApi
                 TeamTwoScore = 8
             };
             // Act
-            var actual = target.PostGame(newGameDto).Result;
+            var actual = await target.PostGame(newGameDto);
             // Assert
             Assert.IsNotNull(actual);
             Assert.IsInstanceOfType<BadRequestObjectResult>(actual.Result);
@@ -332,7 +333,7 @@ namespace TestPickleBallApi
 
         [TestMethod]
         [TestCategory("unit")]
-        public void PostGameTest_PreGame()
+        public async Task PostGame_NoScoresOrDate_ReturnsPrediction()
         {
             _testLog.LogTrace("Starting PostGameTest_PreGame");
             // Arrange
@@ -353,7 +354,7 @@ namespace TestPickleBallApi
             time.Advance(TimeSpan.FromSeconds(10.0));
 
             // Act
-            var actual = target.PostGame(newGameDto).Result;
+            var actual = await target.PostGame(newGameDto);
             // Assert
             Assert.IsNotNull(actual);
             Assert.IsInstanceOfType<CreatedAtActionResult>(actual.Result);
@@ -401,7 +402,7 @@ namespace TestPickleBallApi
 
         [TestMethod]
         [TestCategory("unit")]
-        public void PutGameTest_ValidData()
+        public async Task PutGameTest_ValidData()
         {
             _testLog.LogTrace("Starting PutGameTest_ValidData");
             // Arrange
@@ -423,7 +424,7 @@ namespace TestPickleBallApi
             using (var setupCtx = new VprContext(_vprOpt))
             {
                 var setup = new GamesController(setupCtx, _mapper, time, gameLogic, log);
-                var postResult = setup.PostGame(newGameDto).Result;
+                var postResult = await setup.PostGame(newGameDto);
                 Assert.IsNotNull(postResult);
                 Assert.IsInstanceOfType<CreatedAtActionResult>(postResult.Result);
                 var postCreatedResult = postResult.Result as CreatedAtActionResult;
@@ -448,7 +449,7 @@ namespace TestPickleBallApi
             using (var ctx = new VprContext(_vprOpt))
             {
                 var target = new GamesController(ctx, _mapper, time, gameLogic, log);
-                actual = target.PutGame(4, updatedNewGameDto).Result;
+                actual = await target.PutGame(4, updatedNewGameDto);
             }
 
             // Assert
@@ -478,7 +479,7 @@ namespace TestPickleBallApi
 
         [TestMethod]
         [TestCategory("unit")]
-        public void PutGameTest_InvalidGameId()
+        public async Task PutGameTest_InvalidGameId()
         {
             _testLog.LogTrace("Starting PutGameTest_InvalidGameId");
             // Arrange
@@ -491,7 +492,7 @@ namespace TestPickleBallApi
             };
 
             // Act
-            var actual = target.PutGame(3, newGameDto).Result; // id does not match gameDto.GameId
+            var actual = await target.PutGame(3, newGameDto); // id does not match gameDto.GameId
 
             // Assert
             Assert.IsNotNull(actual);
@@ -504,7 +505,7 @@ namespace TestPickleBallApi
 
         [TestMethod]
         [TestCategory("unit")]
-        public void PutGameTest_InvalidGame()
+        public async Task PutGameTest_InvalidGame()
         {
             _testLog.LogTrace("Starting PutGameTest_InvalidGame");
             // Arrange
@@ -525,7 +526,7 @@ namespace TestPickleBallApi
             };
 
             // Act
-            var actual = target.PutGame(1, newGameDto).Result;
+            var actual = await target.PutGame(1, newGameDto);
 
             // Assert
             Assert.IsNotNull(actual);
@@ -538,7 +539,7 @@ namespace TestPickleBallApi
 
         [TestMethod]
         [TestCategory("unit")]
-        public void PutGameTest_InvalidPlayer()
+        public async Task PutGameTest_InvalidPlayer()
         {
             _testLog.LogTrace("Starting PutGameTest_InvalidPlayer");
             // Arrange
@@ -560,7 +561,7 @@ namespace TestPickleBallApi
             };
 
             // Act
-            var actual = target.PutGame(1, newGameDto).Result;
+            var actual = await target.PutGame(1, newGameDto);
 
             // Assert
             Assert.IsNotNull(actual);
@@ -573,7 +574,7 @@ namespace TestPickleBallApi
 
         [TestMethod]
         [TestCategory("unit")]
-        public void PutGameTest_DbUpdate()
+        public async Task PutGameTest_DbUpdate()
         {
             _testLog.LogTrace("Starting PutGameTest_DbUpdate");
             // Arrange
@@ -596,7 +597,7 @@ namespace TestPickleBallApi
             _testLog.LogTrace("PutGameTest_ValidData end arrangement");
 
             // Act
-            var actual = target.PutGame(4, newGameDto).Result;
+            var actual = await target.PutGame(4, newGameDto);
 
             // Assert
             Assert.IsNotNull(actual);

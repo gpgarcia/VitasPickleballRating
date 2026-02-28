@@ -9,6 +9,7 @@ namespace TestPickleBallApi;
 public class ProgramTests
 {
     [TestMethod]
+    [TestCategory("unit")]
     public void TestConfigureServices()
     {
         // Arrange
@@ -26,6 +27,8 @@ public class ProgramTests
 
     }
 
+    [TestMethod]
+    [TestCategory("unit")]
     public void PickleballProfile_ShouldBeValid()
     {
         // Arrange

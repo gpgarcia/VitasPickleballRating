@@ -81,6 +81,7 @@ public class PlayersControllerTests
     }
 
     [TestMethod]
+    [TestCategory("unit")]
     public async Task GetPlayers_ReturnsAllPlayers()
     {
         using var context = new VprContext(_options);
@@ -97,6 +98,7 @@ public class PlayersControllerTests
     }
 
     [TestMethod]
+    [TestCategory("unit")]
     public async Task GetPlayer_ReturnsPlayer_WhenExists()
     {
         using var context = new VprContext(_options);
@@ -112,6 +114,7 @@ public class PlayersControllerTests
     }
 
     [TestMethod]
+    [TestCategory("unit")]
     public async Task GetPlayer_ReturnsNotFound_WhenMissing()
     {
         using var context = new VprContext(_options);
@@ -123,6 +126,7 @@ public class PlayersControllerTests
     }
 
     [TestMethod]
+    [TestCategory("unit")]
     public async Task GetPlayerRatings_ReturnsRatings()
     {
         using var context = new VprContext(_options);
@@ -140,6 +144,7 @@ public class PlayersControllerTests
     }
 
     [TestMethod]
+    [TestCategory("unit")]
     public async Task GetPlayerRatings_NotFound()
     {
         using var context = new VprContext(_options);
@@ -152,6 +157,7 @@ public class PlayersControllerTests
     }
 
     [TestMethod]
+    [TestCategory("unit")]
     public async Task GetLatestRatingBeforeDate_ReturnsCorrectRating()
     {
         using var context = new VprContext(_options);
@@ -166,6 +172,7 @@ public class PlayersControllerTests
     }
 
     [TestMethod]
+    [TestCategory("unit")]
     public async Task GetLatestRatingBeforeDate_ReturnsNotFound_WhenNoMatch()
     {
         using var context = new VprContext(_options);
@@ -177,6 +184,7 @@ public class PlayersControllerTests
     }
 
     [TestMethod]
+    [TestCategory("unit")]
     public async Task PostPlayer_CreatesNewPlayer()
     {
         using var context = new VprContext(_options);
@@ -190,6 +198,7 @@ public class PlayersControllerTests
     }
 
     [TestMethod]
+    [TestCategory("unit")]
     public async Task PutPlayer_UpdatesPlayer()
     {
         using var context = new VprContext(_options);
@@ -202,6 +211,7 @@ public class PlayersControllerTests
     }
 
     [TestMethod]
+    [TestCategory("unit")]
     public async Task PutPlayer_ReturnsBadRequest_WhenIdMismatch()
     {
         using var context = new VprContext(_options);
